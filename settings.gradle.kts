@@ -1,1 +1,1 @@
-rootProject.name = "flowmeet-backend"
+rootProject.name = "flowmeet-api"

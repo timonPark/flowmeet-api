@@ -1,6 +1,6 @@
-# flowmeet-backend
+# flowmeet-api
 
-조직 지시 및 업무 흐름 관리 플랫폼 백엔드.
+조직 지시 및 업무 흐름 관리 플랫폼 API 서버. 웹 프론트엔드는 별도 리포 `flowmeet-web`.
 
 - Kotlin + Spring Boot 3.4
 - Spring Data JPA, Spring Security(JWT), Validation
@@ -37,7 +37,7 @@ docker compose up -d
 ## 디렉터리 구조
 
 ```text
-backend/
+flowmeet-api/
 ├─ src/main/kotlin/com/flowmeet/
 ├─ src/main/resources/application.yml
 ├─ database/schema.sql

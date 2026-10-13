@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-조직 지시 및 업무 흐름 관리 플랫폼 백엔드 리포. 프론트엔드는 별도 리포 (`../frontend`).
+조직 지시 및 업무 흐름 관리 플랫폼 API 리포 (`flowmeet-api`). 웹 프론트엔드는 별도 리포 (`../flowmeet-web`).
 
 ## 기술 스택
 
@@ -14,7 +14,7 @@
 ## 디렉터리 구조
 
 ```text
-backend/
+flowmeet-api/
 ├─ src/main/kotlin/com/flowmeet/   # 애플리케이션 코드 (base package)
 ├─ src/main/resources/application.yml
 ├─ src/test/kotlin/com/flowmeet/
