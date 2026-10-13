@@ -11,16 +11,17 @@ PR을 외부 리뷰어(**codex CLI**)에게 2차 리뷰받고, Claude가 각 지
 
 - 로컬에 codex CLI 설치 (`which codex`).
 - 현재 브랜치에 PR이 열려 있고 base 브랜치가 결정돼 있음(보통 `main`).
-- `codereview/` 디렉터리는 리포지토리 로컬 산출물(git 추적).
+- `codereview/` 디렉터리는 **로컬 전용 산출물** — `.gitignore`에 포함돼 있어 git 추적 대상이 아니다(원격에 push되지 않음).
 
-## 전체 흐름 (5단계)
+## 전체 흐름 (6단계)
 
 ```
 1. 리뷰 생성 (codex exec)
-2. 산출물 저장 (codereview/<YYYYMMDD>/<slug>.md)
+2. 산출물 저장 (codereview/<YYYYMMDD>/<slug>.md, 로컬 전용)
 3. Triage (Claude가 각 지적을 원문 대조·평가)
 4. 선택적 반영 (유효 판정 항목만)
-5. 재리뷰 (regress 체크, 선택)
+5. 서버 검증 (반영 후 필수 — 레벨 결정 후 실행)
+6. 재리뷰 (regress 체크, 선택)
 ```
 
 ## 1. 리뷰 생성 — codex exec
@@ -100,6 +101,7 @@ codereview/<YYYYMMDD>/<slug>.md
 - `slug`: 브랜치명에서 `/`를 `-`로 치환. 예: `chore/4-spring-layering` → `chore-4-spring-layering`.
 - 같은 브랜치를 같은 날 재리뷰하면 **덮어쓴다**. 다른 날 리뷰는 날짜 폴더가 달라 자연히 분기.
 - **Jira 키·외부 경로 사용 금지** — 리포 로컬 경로만 허용.
+- **git 추적 금지**: `codereview/`는 `.gitignore`에 포함. 원격에 push하지 않는다(개인/팀 로컬 아카이브).
 
 ### 본문 추출
 
@@ -183,21 +185,69 @@ BODY=$(sed -n '/^# Code Review/,/^tokens used$/p' /tmp/codex-review.log | sed '$
 - **유효 판정 항목만 수정**. 부분유효·반려는 미반영.
 - 수정 작업은 **TaskCreate로 추적** (지적 1건 = 태스크 1건 권장).
 - 미반영 항목은 사유를 보고에 명시 — 사용자가 재확인·오버라이드할 수 있도록.
-- 반영 커밋 메시지 패턴:
+- 커밋은 **Step 5 서버 검증 통과 후**에만 push. 커밋 메시지에 Verified 라인을 포함(아래 §5 참조).
+
+## 5. 서버 검증 (필수)
+
+리뷰 지적을 반영한 뒤 **반드시 서버 측 검증**을 돌린다. 반영이 회귀를 유발하지 않았는지 확인하는 단계. 변경 범위에 따라 레벨을 고른다.
+
+### 레벨 선택 기준
+
+| 레벨 | 트리거 | 명령 | 시간 |
+| --- | --- | --- | --- |
+| **L0 — 스타일만** | `.claude/`·`CLAUDE.md`·`README` 등 하네스/문서만 | `./gradlew ktlintCheck` | ~10s |
+| **L1 — 표준** | `src/` 하위 코드 변경(비즈니스/엔티티/컨트롤러) | `./gradlew build` (ktlintCheck + test 포함) | ~1–3min |
+| **L2 — 전체** | DB 스키마, 보안·인증, 외부 API 어댑터, config 변경 | `docker compose up -d` → `./gradlew bootRun`(백그라운드) → `/actuator/health` smoke → `./gradlew build` | ~3–8min |
+
+### 명령 템플릿
+
+```bash
+# L0 — 하네스/문서만 바뀐 PR
+./gradlew ktlintCheck
+
+# L1 — 일반적인 코드 변경
+./gradlew build
+
+# L2 — DB/보안/외부 연동
+docker compose up -d
+./gradlew bootRun > /tmp/boot.log 2>&1 &
+BOOT_PID=$!
+# 기동 대기 후 health check
+until curl -sf http://localhost:8080/actuator/health > /dev/null; do sleep 2; done
+curl -s http://localhost:8080/actuator/health
+# 변경 영역 smoke (예: 인증 바뀌었다면 /api/auth/login)
+# ...
+kill $BOOT_PID
+./gradlew build
+```
+
+### 실패 처리
+
+- **빌드/테스트 실패** → 반영 커밋을 push하지 **않는다**. 원인을 수정하거나 반영을 롤백.
+- **ktlintCheck만 실패** → `./gradlew ktlintFormat`으로 자동 수정 후 재검증.
+- **health 미응답** → `docker compose logs postgres`·`/tmp/boot.log` 확인. 환경 문제면 재시도, 코드 문제면 반영 롤백.
+- **원인이 반영 그 자체이면 Triage 결과를 재평가** — "유효" 판정이 과했을 수 있다.
+
+### 검증 결과 기록
+
+반영 커밋 메시지에 검증 레벨과 결과를 포함한다.
 
 ```text
-chore(review): address codex review #<N> findings (<severity-count>)
+chore(review): address codex findings (<severity-count>)
 
 - <항목 1> (§<섹션>)
 - <항목 2> (§<섹션>)
 
+Verified: L1 — ./gradlew build (passed)
 Refs codex review: codereview/<YYYYMMDD>/<slug>.md
 ```
 
-## 5. 재리뷰 (선택)
+> 검증을 **생략했다면 그 사유도 커밋 메시지에 명시**한다 (예: `Verified: L0 skipped — doc-only change`).
 
-- blocker/high를 반영한 뒤 regression 체크용으로 Step 1~2 재실행.
-- 같은 날이면 산출물이 **덮어쓰기**된다 — 이전 리뷰를 보존하고 싶으면 커밋 분리.
+## 6. 재리뷰 (선택)
+
+- blocker/high를 반영하고 서버 검증을 통과한 뒤 regression 체크용으로 Step 1~2 재실행.
+- 같은 날이면 산출물이 **덮어쓰기**된다 — 이전 리뷰를 보존하고 싶으면 복사해 둔다(원격 push 안 됨).
 
 ## 금지 사항
 
@@ -215,7 +265,9 @@ Refs codex review: codereview/<YYYYMMDD>/<slug>.md
 - [ ] 모든 지적을 원문 대조 후 평가했는가 (유효/부분유효/반려)?
 - [ ] 미반영 항목에 사유를 보고했는가?
 - [ ] 반영 후 blocker·high가 전원 해소되었는가?
-- [ ] `codereview/` 경로가 `codereview/<YYYYMMDD>/<slug>.md` 규약을 따르는가?
+- [ ] **서버 검증(L0/L1/L2)을 실행하고 통과했는가?** 생략했다면 사유를 커밋 메시지에 명시했는가?
+- [ ] 커밋 메시지에 `Verified:` 라인이 포함되었는가?
+- [ ] `codereview/`가 로컬 전용으로 유지되는가 (`.gitignore` 반영, push 안 됨)?
 
 ## 관련 스킬·문서
 

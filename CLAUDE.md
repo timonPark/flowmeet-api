@@ -144,5 +144,6 @@ gradle wrapper --gradle-version 8.12
 PR 생성 후 **codex CLI**를 헤드리스로 호출해 2차 리뷰를 받고, Claude가 각 지적을 원문 대조·평가(triage)해 유효한 것만 반영한다. 사람 리뷰와 병행하는 보조 레인.
 
 - 상세 흐름·프롬프트·추출 스크립트: [.claude/skills/codex-review-triage/SKILL.md](./.claude/skills/codex-review-triage/SKILL.md)
-- 산출물 경로: `codereview/<YYYYMMDD>/<slug>.md` (slug = 브랜치명의 `/`를 `-`로 치환) — git 추적.
-- 금지: Jira·외부 티켓 경로 사용 / codex의 `-s read-only` 외 샌드박스 / Claude triage 생략.
+- 산출물 경로: `codereview/<YYYYMMDD>/<slug>.md` (slug = 브랜치명의 `/`를 `-`로 치환) — **`.gitignore` 적용, 원격에 push되지 않는 로컬 전용 아카이브**.
+- **반영 후 서버 검증 필수** (L0 ktlintCheck / L1 build / L2 bootRun+health). 커밋 메시지에 `Verified: L<N>` 라인 포함.
+- 금지: Jira·외부 티켓 경로 사용 / codex의 `-s read-only` 외 샌드박스 / Claude triage 생략 / 서버 검증 생략한 push.
