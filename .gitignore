@@ -54,3 +54,8 @@ uploads/*
 # 민감한 임시 파일만 제외.
 work_history/*.tmp
 work_history/*.local.md
+
+### Code review (codex headless) ###
+# codex 2차 리뷰 산출물은 로컬 전용 아카이브 — 원격에 push 금지.
+# 상세: .claude/skills/codex-review-triage/SKILL.md
+codereview/
