@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: flowmeet-backend
+  datasource:
+    url: jdbc:postgresql://localhost:5432/flowmeet
+    username: flowmeet
+    password: local-password
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    open-in-view: false
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
+
+server:
+  port: 8080
+
+flowmeet:
+  uploads-dir: ./uploads
+  jwt:
+    secret: ${JWT_SECRET:change-me-in-production-this-is-a-local-dev-secret-at-least-32-bytes}
+    access-token-ttl: PT1H
+    refresh-token-ttl: P14D
+  deepgram:
+    api-key: ${DEEPGRAM_API_KEY:}
+  claude:
+    api-key: ${CLAUDE_API_KEY:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
