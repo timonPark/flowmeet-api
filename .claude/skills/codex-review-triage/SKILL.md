@@ -1,0 +1,224 @@
+---
+name: codex-review-triage
+description: PR을 codex CLI로 2차 리뷰받고, Claude가 지적사항의 타당성을 평가(triage)해 유효한 항목만 반영하는 흐름. PR 생성 후 머지 전에 로드. 사람 리뷰를 대체하지 않는 보조 레인.
+---
+
+# Codex Review Triage
+
+PR을 외부 리뷰어(**codex CLI**)에게 2차 리뷰받고, Claude가 각 지적을 원문 대조해 **유효/부분유효/반려**로 분류한 뒤 유효한 것만 반영한다. 사람 리뷰와 병행하는 보조 레인.
+
+## 전제조건
+
+- 로컬에 codex CLI 설치 (`which codex`).
+- 현재 브랜치에 PR이 열려 있고 base 브랜치가 결정돼 있음(보통 `main`).
+- `codereview/` 디렉터리는 리포지토리 로컬 산출물(git 추적).
+
+## 전체 흐름 (5단계)
+
+```
+1. 리뷰 생성 (codex exec)
+2. 산출물 저장 (codereview/<YYYYMMDD>/<slug>.md)
+3. Triage (Claude가 각 지적을 원문 대조·평가)
+4. 선택적 반영 (유효 판정 항목만)
+5. 재리뷰 (regress 체크, 선택)
+```
+
+## 1. 리뷰 생성 — codex exec
+
+### diff 준비
+
+```bash
+BASE=main
+git diff ${BASE}...HEAD > /tmp/pr.diff
+```
+
+### 프롬프트에 반드시 포함할 억제 지시
+
+사용자 환경의 로컬 codex 스킬이 자동 로드돼 산출물을 엉뚱한 경로(예: `code_review/<JIRA-KEY>/`)에 쓰려 한다. **프롬프트에서 명시적으로 억제**한다.
+
+- `다른 스킬·로컬 workflow 로드 금지 (예: branch-code-review-report)`
+- `파일 쓰기·git 수정·shell 실행 금지` — stdout의 Markdown 본문만 응답
+- `Jira 등 외부 티켓 시스템 참조 금지`
+- 응답은 **Markdown 본문만** (서두·메타 주석 없음)
+- 지적사항에는 **`[severity: blocker|high|medium|low]`** 태그 필수
+
+### 실행
+
+```bash
+(cat <<'PROMPT'
+너는 숙련된 Kotlin + Spring Boot 코드 리뷰어다. 아래 diff는 flowmeet-api PR #<N> (브랜치 `<branch>`, base `<base>`) 변경이다.
+
+중요 지침:
+- **다른 스킬·로컬 workflow 로드 금지** (예: branch-code-review-report).
+- **파일을 쓰거나 git을 수정하지 말 것**. shell 명령 실행 금지.
+- **Jira·외부 티켓 시스템 참조·경로 금지**. 리포 로컬 산출물 경로만 상정.
+- 응답은 **Markdown 본문만** 출력. 메타 주석·인삿말·서두 없음.
+
+응답 섹션 (한국어, 이 순서 그대로):
+
+# Code Review — PR #<N> <branch>
+
+## 요약
+(3~5문장: 변경 의도 + 리뷰 총평)
+
+## 강점
+- bullet
+
+## 지적사항
+각 항목에 **[severity: blocker|high|medium|low]** 태그 필수. 파일/섹션 명시, 근거 포함.
+- [severity: ...] <제목>: <설명>
+
+## 질문·제안
+- bullet
+
+## 체크리스트
+- [ ] 후속 확인 항목
+
+컨텍스트:
+- 리포 스택: Kotlin 1.9 + Spring Boot 3.4 + Gradle KTS, PostgreSQL 16, JPA, JWT.
+- PR 변경 범위: <한 줄 요약>
+- 상위 규칙 문서: `.claude/skills/kotlin-style/SKILL.md`, `.claude/skills/spring-layering/SKILL.md`
+
+---DIFF---
+PROMPT
+cat /tmp/pr.diff
+) | codex exec -s read-only - 2>&1 | tee /tmp/codex-review.log
+```
+
+- `-s read-only` **고정** — codex가 로컬 파일을 쓰지 못하게 함.
+- stdin으로 `---DIFF---` 섹션 포함해 넘기면 codex가 diff를 그대로 리뷰 대상으로 삼는다.
+
+## 2. 산출물 저장
+
+### 경로 규약
+
+```text
+codereview/<YYYYMMDD>/<slug>.md
+```
+
+- `YYYYMMDD`: 리뷰 실행일(로컬 기준).
+- `slug`: 브랜치명에서 `/`를 `-`로 치환. 예: `chore/4-spring-layering` → `chore-4-spring-layering`.
+- 같은 브랜치를 같은 날 재리뷰하면 **덮어쓴다**. 다른 날 리뷰는 날짜 폴더가 달라 자연히 분기.
+- **Jira 키·외부 경로 사용 금지** — 리포 로컬 경로만 허용.
+
+### 본문 추출
+
+codex exec 로그는 헤더·tokens 요약 등이 섞인다. `# Code Review`부터 `tokens used` 전까지만 추출.
+
+```bash
+DATE=$(date +%Y%m%d)
+SLUG=$(git branch --show-current | tr '/' '-')
+OUT="codereview/${DATE}/${SLUG}.md"
+mkdir -p "$(dirname "$OUT")"
+
+# 리뷰 본문 추출 (첫 '# Code Review' 블록 ~ 'tokens used' 직전)
+BODY=$(sed -n '/^# Code Review/,/^tokens used$/p' /tmp/codex-review.log | sed '$d')
+
+{
+  echo "---"
+  echo "pr: <N>"
+  echo "branch: $(git branch --show-current)"
+  echo "base: ${BASE}"
+  echo "reviewer: $(codex --version 2>&1 | head -1)"
+  echo "generated_at: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo "---"
+  echo
+  echo "$BODY"
+} > "$OUT"
+```
+
+### Frontmatter 필수 필드
+
+| 필드 | 설명 |
+| --- | --- |
+| `pr` | GitHub PR 번호 |
+| `branch` | 리뷰 대상 브랜치 |
+| `base` | diff 기준 브랜치 |
+| `reviewer` | codex 버전 문자열 |
+| `generated_at` | ISO8601 UTC |
+
+## 3. Triage — Claude가 각 지적을 평가
+
+**Claude는 codex 결과를 그대로 신뢰하지 않는다.** 각 항목을 원문과 대조한다.
+
+### 평가 축
+
+| 판정 | 기준 |
+| --- | --- |
+| **유효 ✓** | 지적이 원문/코드에서 사실로 확인되고, 수정이 필요 |
+| **부분유효 △** | 지적은 사실이지만 상위 규칙·다른 문서가 이미 처리 중이거나 범위가 과장됨 |
+| **반려 ✗** | 환각(실제 코드에 없는 라인/API를 지적), 사실 오인, heuristic 과잉 적용 |
+
+### 체크해야 할 항목
+
+- **원문 대조**: 지적된 파일·섹션·라인을 Read로 확인. 인용된 심볼이 실제로 존재하는가?
+- **상호 참조**: 상위 규칙(kotlin-style 등)이 이미 커버하는지 — 중복 지적인지 확인.
+- **severity 재분류**: codex가 과대·과소 평가하는 경우가 있다. Claude가 재조정.
+- **놓친 지점**: codex가 발견 못한 중대 이슈(보안·일관성)가 있는지 사람 리뷰어 관점으로 보강.
+
+### 보고 포맷
+
+사용자에게 제시할 Triage 요약:
+
+```markdown
+## 전체 평가: ★★★★☆ (예시)
+
+### 항목별 평가
+
+#### 1. [codex severity] 제목 — **유효 ✓**
+- 근거: `<파일>:<섹션>`에서 실제 확인
+- 권장 액션: ...
+
+#### 2. [codex severity] 제목 — **부분유효 △**
+- 근거: ...
+- 미반영 사유: 상위 규칙 X가 이미 커버
+
+#### 3. [codex severity] 제목 — **반려 ✗**
+- 근거: ...
+- 사유: 환각 / 사실 오인
+```
+
+## 4. 선택적 반영
+
+- **유효 판정 항목만 수정**. 부분유효·반려는 미반영.
+- 수정 작업은 **TaskCreate로 추적** (지적 1건 = 태스크 1건 권장).
+- 미반영 항목은 사유를 보고에 명시 — 사용자가 재확인·오버라이드할 수 있도록.
+- 반영 커밋 메시지 패턴:
+
+```text
+chore(review): address codex review #<N> findings (<severity-count>)
+
+- <항목 1> (§<섹션>)
+- <항목 2> (§<섹션>)
+
+Refs codex review: codereview/<YYYYMMDD>/<slug>.md
+```
+
+## 5. 재리뷰 (선택)
+
+- blocker/high를 반영한 뒤 regression 체크용으로 Step 1~2 재실행.
+- 같은 날이면 산출물이 **덮어쓰기**된다 — 이전 리뷰를 보존하고 싶으면 커밋 분리.
+
+## 금지 사항
+
+- ❌ **Jira 키·외부 티켓 참조**: codex에게 Jira 키·외부 URL을 넘기지 않는다. 산출물 경로에도 티켓 키를 쓰지 않는다. (이전 프로젝트의 `branch-code-review-report` 스킬이 Jira 기반 경로를 요구하지만, flowmeet-api에서는 **그 스킬 자체를 억제**한다.)
+- ❌ **`-s workspace-write` 이상의 샌드박스**: codex가 파일을 쓰거나 git을 조작할 가능성을 차단해야 한다. 반드시 `-s read-only`.
+- ❌ **거대 PR 리뷰**: diff 수백 줄을 넘기면 리뷰 품질이 급락한다. PR을 쪼갠다.
+- ❌ **codex 결과를 그대로 수용·커밋**: Claude의 triage를 생략하지 않는다. 과장·환각이 섞여 있을 수 있다.
+- ❌ **사람 리뷰 대체**: 이 흐름은 보조 레인. 프로덕션 코드는 사람 승인 필수.
+
+## 리뷰 체크리스트
+
+- [ ] codex 호출에 `-s read-only` 적용했는가?
+- [ ] 프롬프트에 "스킬 로드 금지, 파일 쓰기 금지, Jira 참조 금지" 명시했는가?
+- [ ] 산출물에 frontmatter(pr·branch·base·reviewer·generated_at) 포함했는가?
+- [ ] 모든 지적을 원문 대조 후 평가했는가 (유효/부분유효/반려)?
+- [ ] 미반영 항목에 사유를 보고했는가?
+- [ ] 반영 후 blocker·high가 전원 해소되었는가?
+- [ ] `codereview/` 경로가 `codereview/<YYYYMMDD>/<slug>.md` 규약을 따르는가?
+
+## 관련 스킬·문서
+
+- [kotlin-style](../kotlin-style/SKILL.md) — Kotlin 전제 규칙 (리뷰 시 상호 참조)
+- [spring-layering](../spring-layering/SKILL.md) — Spring Boot 레이어링 규칙
+- `../../../CLAUDE.md` — 외부 코드 리뷰 섹션 (이 스킬의 포인터)

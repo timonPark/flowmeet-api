@@ -101,8 +101,7 @@ gradle wrapper --gradle-version 8.12
 
 - Kotlin 공식 코딩 컨벤션 (4-space indent, trailing comma 허용).
 - 스타일·네이밍·패키징 상세는 [.claude/skills/kotlin-style/SKILL.md](./.claude/skills/kotlin-style/SKILL.md) 참고 — ktlint가 자동 강제.
-- Spring Boot 레이어 책임(Controller/Service/Repository/DTO·Entity 변환)은 [.claude/skills/spring-layering/SKILL.md](./.claude/skills/spring-layering/SKILL.md) 참고.
-- 패키지 레이아웃은 BC-first (`com.flowmeet.<context>/{api,application,domain,infrastructure}`). Controller는 Entity 반환 금지, 트랜잭션 경계는 Application 레이어에만.
+- Spring Boot 레이어 책임(Controller는 Entity 반환 금지, 트랜잭션 경계는 Application만, 조회는 Projection 반환)은 [.claude/skills/spring-layering/SKILL.md](./.claude/skills/spring-layering/SKILL.md) 참고 — 패키지 구조(BC-first)·네이밍 등 상위 규칙이 상충하면 kotlin-style이 우선.
 - Spring Boot 설정은 `application.yml` 사용 (properties 금지).
 - 엔티티는 `@Entity` + `data class` 사용 지양 → 일반 `class`로 작성 (JPA 호환).
 - 테스트는 JUnit 5 + Spring Security Test. `@SpringBootTest`는 최소화하고 slice test 우선.
@@ -139,3 +138,11 @@ gradle wrapper --gradle-version 8.12
 ### 하네스 자가 수정 주의
 
 `.claude/` 아래 파일은 에이전트 자가 수정 대상으로 분류돼 자동 승인에서 종종 차단된다. 해당 경로를 수정하는 PR은 반드시 사람이 리뷰한다.
+
+## 외부 코드 리뷰 (codex headless)
+
+PR 생성 후 **codex CLI**를 헤드리스로 호출해 2차 리뷰를 받고, Claude가 각 지적을 원문 대조·평가(triage)해 유효한 것만 반영한다. 사람 리뷰와 병행하는 보조 레인.
+
+- 상세 흐름·프롬프트·추출 스크립트: [.claude/skills/codex-review-triage/SKILL.md](./.claude/skills/codex-review-triage/SKILL.md)
+- 산출물 경로: `codereview/<YYYYMMDD>/<slug>.md` (slug = 브랜치명의 `/`를 `-`로 치환) — git 추적.
+- 금지: Jira·외부 티켓 경로 사용 / codex의 `-s read-only` 외 샌드박스 / Claude triage 생략.
