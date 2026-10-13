@@ -20,7 +20,7 @@ description: flowmeet-api의 에러 처리 체계 — ApiException + ErrorCode +
 
 - 코드 포맷: **`<BC>-<번호>`** (예: `MEETING-404`, `AUTH-401`).
   - `<BC>` = 바운디드 컨텍스트. 공통은 `COMMON`.
-  - `<번호>` = HTTP 상태 코드와 일치시키되, 같은 BC·상태의 다른 코드가 필요하면 `-001`, `-002` 식으로 연번.
+  - `<번호>` = HTTP 상태 코드와 일치시킨다. 같은 BC·상태의 다른 코드가 필요하면 **`<BC>-<상태>-001`, `<BC>-<상태>-002`** 형식의 접미사 (예: `AUTH-401-001`). **HTTP 상태와 불일치하는 임의 번호 금지**.
 - 추가 위치: `common/exception/ErrorCode.kt`에 섹션 주석(`// 회의 (MEETING-xxx)`) 아래 enum 상수로.
 - **`code` 값은 변경 금지** — 클라이언트가 분기 키로 쓴다. 메시지는 바꿔도 OK.
 - `defaultMessage`는 사용자 노출용. **민감 정보 포함 금지** (TRD §11): 비밀번호 해시, 토큰, 음성 원문, 회의 세부 내용.
@@ -41,6 +41,19 @@ throw ApiException(ErrorCode.INTERNAL_ERROR, cause = e)
 - Service 레이어에서 던진다. Controller는 던지지 않는다(검증 실패는 Bean Validation으로).
 - `ApiException`을 상속한 전용 예외(`MeetingNotFoundException` 등)를 BC별로 두는 것은 **선택** — 간단한 경우 그냥 `ApiException(code)`로 충분하다.
 
+## 3.1 입력 오류 자동 매핑
+
+전역 핸들러가 400으로 자동 매핑하는 Spring 예외:
+
+| 예외 | 상황 | 응답 |
+| --- | --- | --- |
+| `MethodArgumentNotValidException` | `@Valid` 바인딩 실패 | 400 + `COMMON-400` + `fieldErrors` |
+| `HttpMessageNotReadableException` | JSON 파싱 실패 (malformed body 등) | 400 + `COMMON-400` |
+| `MethodArgumentTypeMismatchException` | 경로/쿼리 변수 타입 불일치 | 400 + `COMMON-400` |
+| `MissingServletRequestParameterException` | 필수 쿼리 파라미터 누락 | 400 + `COMMON-400` |
+
+→ 이들은 원인 메시지를 응답·로그에 노출하지 않는다 (Spring 내부 메시지에 입력값 원문이 섞일 수 있음).
+
 ## 4. 응답 형식 (사용자 분기 기준)
 
 ```json
@@ -60,13 +73,14 @@ throw ApiException(ErrorCode.INTERNAL_ERROR, cause = e)
 
 | 분류 | 레벨 | 포함 정보 |
 | --- | --- | --- |
-| `ApiException` (4xx) | `WARN` | `errorCode.code`, `path`, `userMessage`, stack trace |
-| `ApiException` (5xx) | `ERROR` | 위 + 원인 예외 |
-| `MethodArgumentNotValidException` | `INFO` 이하 (로그 생략 가능) | 사용자 입력 실수 — 로그 노이즈 금지 |
+| `ApiException` (4xx) | `WARN` | `code`, `path`만. **stack trace·cause·userMessage 생략** (노이즈·민감정보 유출 축소) |
+| `ApiException` (5xx) | `ERROR` | `code`, `path`, 원인 예외(cause 포함 stack trace) |
+| 입력 오류 (`MethodArgumentNotValidException`·`HttpMessageNotReadableException` 등) | `WARN` | `path`, 예외 타입명만 |
 | 처리되지 않은 예외 | `ERROR` | `path`, 원인 예외 전체 |
 
-- **원인 메시지(`cause.message`)는 응답에 노출 금지** — 로그에만. (TRD §11)
-- JWT 토큰·비밀번호·음성 파일 경로 등은 로그에서도 마스킹한다 (별도 로깅 규칙 #8 참조).
+- **응답 바디**에는 어떤 경우에도 `cause.message`나 스택 트레이스 노출 금지 (TRD §11).
+- 4xx WARN에서 `userMessage`를 로그에 남기지 않는 이유: `overrideMessage`에 호출부 실수로 민감 데이터가 섞일 가능성을 차단. 디버깅은 `code + path`로 충분.
+- JWT 토큰·비밀번호·음성 파일 경로 등 범용 마스킹은 별도 로깅 규칙 #8 범위.
 
 ## 6. 금지 사항
 

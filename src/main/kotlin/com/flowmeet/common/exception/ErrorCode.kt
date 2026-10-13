@@ -24,7 +24,7 @@ enum class ErrorCode(
 
     // 인증·사용자 (AUTH-xxx, USER-xxx)
     INVALID_CREDENTIALS("AUTH-401", HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다."),
-    EXPIRED_TOKEN("AUTH-402", HttpStatus.UNAUTHORIZED, "인증 토큰이 만료되었습니다."),
+    EXPIRED_TOKEN("AUTH-401-001", HttpStatus.UNAUTHORIZED, "인증 토큰이 만료되었습니다."),
 
     // 회의 (MEETING-xxx) — TRD §4.1 상태 머신 참조
     MEETING_NOT_FOUND("MEETING-404", HttpStatus.NOT_FOUND, "회의를 찾을 수 없습니다."),

@@ -78,6 +78,42 @@ class GlobalExceptionHandlerTest {
             .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("secret-payload"))))
     }
 
+    @Test
+    fun `ApiException의 cause message는 응답에 노출되지 않는다`() {
+        mockMvc
+            .perform(get("/test/api-exception-with-cause"))
+            .andExpect(status().isInternalServerError)
+            .andExpect(jsonPath("$.errorCode").value("COMMON-500"))
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("db-secret"))))
+    }
+
+    @Test
+    fun `잘못된 JSON 바디는 400으로 변환된다`() {
+        mockMvc
+            .perform(
+                post("/test/validate")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""{"name":"""),
+            ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.errorCode").value("COMMON-400"))
+    }
+
+    @Test
+    fun `경로 변수 타입 불일치는 400으로 변환된다`() {
+        mockMvc
+            .perform(get("/test/typed/not-a-number"))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.errorCode").value("COMMON-400"))
+    }
+
+    @Test
+    fun `필수 쿼리 파라미터 누락은 400으로 변환된다`() {
+        mockMvc
+            .perform(get("/test/required"))
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.errorCode").value("COMMON-400"))
+    }
+
     @RestController
     @RequestMapping("/test")
     class TestController {
@@ -87,10 +123,27 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/api-exception-override")
         fun apiExceptionOverride(): Nothing = throw ApiException(ErrorCode.MEETING_ALREADY_COMPLETED, overrideMessage = "overridden")
 
+        @GetMapping("/api-exception-with-cause")
+        fun apiExceptionWithCause(): Nothing =
+            throw ApiException(
+                ErrorCode.INTERNAL_ERROR,
+                cause = IllegalStateException("db-secret: pw=1234"),
+            )
+
         @PostMapping("/validate")
         fun validate(
             @Valid @RequestBody request: NamedRequest,
         ): String = request.name
+
+        @GetMapping("/typed/{id}")
+        fun typed(
+            @org.springframework.web.bind.annotation.PathVariable id: Long,
+        ): String = id.toString()
+
+        @GetMapping("/required")
+        fun required(
+            @org.springframework.web.bind.annotation.RequestParam(name = "q") q: String,
+        ): String = q
 
         @GetMapping("/generic")
         fun generic(): Nothing = throw IllegalStateException("secret-payload: token=sk_live_xyz")
