@@ -100,3 +100,35 @@ gradle wrapper --gradle-version 8.12
 - 엔티티는 `@Entity` + `data class` 사용 지양 → 일반 `class`로 작성 (JPA 호환).
 - 테스트는 JUnit 5 + Spring Security Test. `@SpringBootTest`는 최소화하고 slice test 우선.
 - 외부 API 호출(Deepgram, Claude)은 인터페이스 → 구현체 분리 (`infrastructure/`).
+
+## Claude Code 하네스
+
+이 레포는 `.claude/` 하네스를 포함한다. 로컬 스킬·에이전트·커맨드 정의 위치는 다음과 같다 (SSOT).
+
+```text
+.claude/
+├─ skills/<이름>/SKILL.md     # 로컬 스킬 (예: work-manager)
+├─ agents/<이름>.md           # 전문 에이전트 (예: feat, fix, refactor, doc)
+├─ commands/<이름>.md         # 슬래시 커맨드 (선택)
+└─ settings.json              # 공유 허용 툴·env (팀 기본값, 추적)
+
+# 개인 오버라이드 (gitignore)
+.claude/settings.local.json
+```
+
+### 스킬 추가 규칙
+
+- 새 스킬은 반드시 `.claude/skills/<kebab-case-이름>/SKILL.md` 로 생성.
+- SKILL.md 상단에 `name`, `description` frontmatter 필수 (Claude Code가 색인).
+- 스킬은 하나의 책임만 — 복잡해지면 쪼갠다.
+
+### work_history
+
+- 위치: `work_history/` (**git 추적**)
+- 각 작업은 Phase 2 포팅 후 `work-manager` 스킬이 자동 기록.
+- 민감 정보(음성·회의 내용·토큰)는 로그에 쓰지 않는다 (TRD §11).
+- `*.tmp`, `*.local.md`는 gitignore — 임시/개인 메모 전용.
+
+### 하네스 자가 수정 주의
+
+`.claude/` 아래 파일은 에이전트 자가 수정 대상으로 분류돼 자동 승인에서 종종 차단된다. 해당 경로를 수정하는 PR은 반드시 사람이 리뷰한다.

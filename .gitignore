@@ -43,3 +43,14 @@ out/
 ### Uploads ###
 uploads/*
 !uploads/.gitkeep
+
+### Claude Code harness ###
+# Local-only overrides; shared settings live in .claude/settings.json
+.claude/settings.local.json
+.claude/.cache/
+
+### Work history ###
+# work_history/ 자체는 추적한다 (Phase 2 메트릭이 이 기록을 집계).
+# 민감한 임시 파일만 제외.
+work_history/*.tmp
+work_history/*.local.md

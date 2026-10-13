@@ -47,3 +47,14 @@ flowmeet-api/
 ```
 
 TRD는 상위 레포 `outputs/TRD_조직지시_업무흐름관리플랫폼.md` 참고.
+
+## Claude Code 하네스
+
+이 레포는 Claude Code 하네스를 포함한다. 상세는 [CLAUDE.md](./CLAUDE.md) 참고.
+
+- `.claude/skills/<이름>/SKILL.md` — 로컬 스킬 정의 (SSOT)
+- `.claude/agents/<이름>.md` — 전문 에이전트 정의
+- `.claude/commands/` — 슬래시 커맨드 (선택)
+- `.claude/settings.json` — 공유 허용 툴·env (팀 기본값, 추적)
+- `.claude/settings.local.json` — 개인 오버라이드 (gitignore)
+- `work_history/` — 작업 이력 (**추적함**). Phase 2 메트릭 체계가 이 기록을 집계.
