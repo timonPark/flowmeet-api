@@ -1,0 +1,107 @@
+---
+name: issue-kickoff
+description: GitHub Issue #N 과 사전 수집된 baseBranch·branchType을 받아 (1) 이슈 조회 (2) slug 추출 (3) 브랜치 분기 를 수행하는 수행 에이전트. work-manager _issue-flow Step 1에서 호출된다. Agent 툴 호출 금지 — Claude Code가 Read 후 직접 실행.
+metadata:
+  allowed-tools:
+    - Read
+    - Bash(git fetch:*)
+    - Bash(git checkout:*)
+    - Bash(git branch:*)
+    - Bash(git status:*)
+    - Bash(gh issue view:*)
+    - Bash(date:*)
+---
+
+# issue-kickoff — 이슈 조회 + 브랜치 분기
+
+work-manager `_issue-flow.md` Step 1에서 호출. **Agent 툴로 호출하지 않는다** — Claude Code가 이 파일을 Read 후 **직접 실행**한다. (1-depth 유지)
+
+## 입력
+
+| 변수 | 설명 |
+|---|---|
+| `{N}` | GitHub Issue 번호 (정수) |
+| `{baseBranch}` | `main` / `develop` / `release` 중 하나 (Step 0에서 수집) |
+| `{branchType}` | `feature` / `fix` / `chore` / `refactor` / `docs` / `test` (Step 0에서 수집) |
+
+## 수행
+
+### 1. 이슈 조회
+
+```bash
+gh issue view {N} --repo timonPark/flowmeet-api \
+  --json number,title,body,labels,state,url
+```
+
+- 404 → "이슈 #{N}이 존재하지 않습니다. 번호를 다시 확인해 주세요." 로 되묻고 중단.
+- `state == CLOSED` → "#{N}은 이미 종료된 이슈입니다. 작업을 계속할까요?"로 확인.
+- 결과에서 `title`, `labels[].name`, `state`, `url` 보존.
+
+### 2. slug 추출
+
+제목에서 **소문자·하이픈·30자 이내** slug 조립.
+
+- 대괄호 접두어(`[P2-2]` 등) 제거.
+- 특수문자(`().,!?/\`)·공백 → 하이픈.
+- 연속 하이픈은 1개로 축약.
+- 양 끝 하이픈 제거.
+- **ASCII 외 문자(한글 등)**: 가능하면 영문 요약으로 교체 (예: `에러처리` → `error-handling`). 번역이 과하면 영문 핵심 키워드만 남긴다.
+- 30자 초과 시 뒤쪽 토큰부터 잘라낸다.
+
+예시:
+- `[P2-2] GitHub Issue flow (상태 라벨 전환, 브랜치 생성 통합)` → `github-issue-flow`
+- `[fix] 로그인 시 500 에러 발생` → `fix-login-500-error` 또는 `login-500-error`
+
+→ 결과를 `{slug}`에 저장.
+
+### 3. 브랜치 조립 + 분기
+
+```bash
+BRANCH="{branchType}/{N}-{slug}"
+
+git fetch origin
+git checkout main
+git pull
+
+# 이미 존재하면 해당 브랜치로 전환
+if git show-ref --verify --quiet "refs/heads/${BRANCH}"; then
+  git checkout "${BRANCH}"
+else
+  git checkout -b "${BRANCH}" "origin/{baseBranch}"
+fi
+
+# 결과 확인
+HEAD_SHA=$(git rev-parse --short HEAD)
+echo "Branch: ${BRANCH}, HEAD: ${HEAD_SHA}, Base: {baseBranch}"
+```
+
+### 4. 결과 보고 (투명성 포맷)
+
+```
+▶ [issue-kickoff] 이슈 #{N} 조회 및 브랜치 분기
+✅ [issue-kickoff] 브랜치: {branch}, HEAD: {sha}, base: {baseBranch}
+   · 제목: {title — 이슈 title 그대로. 민감 내용이 섞여 보이면 요약으로 교체}
+   · 라벨: {labels 배열}
+   · state: {OPEN|CLOSED}
+```
+
+## 호출자 (work-manager) 책임
+
+issue-kickoff 반환 후 호출자가 수행:
+
+1. **work_history 파일 생성** (`_issue-flow.md` Step 2 — `title`·`labels`·`state`·`branch` 전달)
+2. **status 라벨 전환** (`_issue-flow.md` Step 3 — `status:todo` → `status:in-progress`)
+3. 전문 에이전트 또는 사용자 수동 작업으로 핸드오프
+
+## 금지
+
+- ❌ Agent 툴로 호출 (반드시 Claude Code가 직접 Read·실행).
+- ❌ 브랜치 전환 전에 `git stash` 없이 작업 중인 변경 유실.
+- ❌ 이슈 본문(`body`)을 로그·보고 메시지에 그대로 노출 — 요약하거나 생략.
+- ❌ 사용자 확인 없이 CLOSED 이슈에서 작업 재개.
+
+## 관련
+
+- [work-manager/_issue-flow.md](../skills/work-manager/_issue-flow.md) — 호출자
+- [work-manager/_REFERENCE.md](../skills/work-manager/_REFERENCE.md) — frontmatter 규약
+- [security-logging](../skills/security-logging/SKILL.md) — Masker 사용 기준
