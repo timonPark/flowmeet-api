@@ -43,18 +43,31 @@ CLAUDE.md "작업 시작 규칙"의 브랜치 명명과 메트릭의 `type`을 1
 
 work-manager는 Step 2 유형 판정 결과를 받아 아래 에이전트를 호출한다. 에이전트 정의는 `.claude/agents/*.md`. 호출 금지(1-depth): Claude Code가 Read 후 직접 실행.
 
-| `type` | `agent` | 에이전트 파일 |
-|---|---|---|
-| `FEAT` | `feat-developer` | [feat-developer.md](../../agents/feat-developer.md) |
-| `FIX` | `fix-developer` | [fix-developer.md](../../agents/fix-developer.md) |
-| `REFACTOR` · `PERF` | `refactor-developer` | [refactor-developer.md](../../agents/refactor-developer.md) |
-| `DOC` · `CHORE`(하네스) | `doc-updater` | [doc-updater.md](../../agents/doc-updater.md) |
-| `TEST` | `feat-developer` | 테스트도 TDD 기반 신규 작성이므로 feat-developer 재사용 |
-| `DEPLOY-REVIEW` | `pr-review-check` | [pr-review-check.md](../../agents/pr-review-check.md) — PR 메타·리뷰 체크 전용 |
-| `ANALYSIS` (문서/하네스 산출물) | `doc-updater` | 조사 결과를 문서로 정리하는 경우 |
-| `ANALYSIS` (코드 변경 포함) | `feat-developer` 또는 `refactor-developer` | 샘플 코드·측정 유틸 등을 추가하면 doc-updater 범위 밖 |
+#### 흐름 전체
 
-> issue 수신 직후의 **브랜치 분기 + work_history 작성**은 공통으로 [`issue-kickoff`](../../agents/issue-kickoff.md)가 수행. 그 뒤에 위 에이전트 중 하나로 핸드오프.
+```
+issue-kickoff (공통) → [brainstormer] → [plan-writer] → 전문 에이전트 → PR
+                      └── 복잡도별 skip ──┘
+```
+
+#### type별 매핑
+
+| `type` | brainstormer | plan-writer | 전문 에이전트 | 비고 |
+|---|---|---|---|---|
+| `FEAT` (복잡: 영향 파일 3개↑ 또는 DB/보안/외부 연동) | ✅ | ✅ | [feat-developer](../../agents/feat-developer.md) | TDD 사이클 |
+| `FEAT` (작음: 단일 파일·레이어) | ⬜ | ✅ (간소) | [feat-developer](../../agents/feat-developer.md) | |
+| `FIX` (재현 조건 명확 + 수정 범위 좁음) | ⬜ | ✅ (간소) | [fix-developer](../../agents/fix-developer.md) | 재현 테스트 먼저 |
+| `FIX` (영향 범위 넓음) | ✅ | ✅ | [fix-developer](../../agents/fix-developer.md) | |
+| `REFACTOR` · `PERF` | ✅ | ✅ | [refactor-developer](../../agents/refactor-developer.md) | 외부 계약 유지 |
+| `TEST` | ⬜ | ✅ (간소) | [feat-developer](../../agents/feat-developer.md) | 테스트도 TDD |
+| `DOC` · `CHORE`(하네스) | ⬜ | ⬜ | [doc-updater](../../agents/doc-updater.md) | L0 |
+| `ANALYSIS` (문서 산출물) | ⬜ | ✅ (간소) | [doc-updater](../../agents/doc-updater.md) | |
+| `ANALYSIS` (코드 변경 포함) | ✅ | ✅ | feat-developer 또는 refactor-developer | 샘플 코드 추가 등 |
+| `DEPLOY-REVIEW` | — | — | [pr-review-check](../../agents/pr-review-check.md) | PR URL 입력 전용 |
+
+> `brainstormer`·`plan-writer` 상세: [`brainstormer.md`](../../agents/brainstormer.md) · [`plan-writer.md`](../../agents/plan-writer.md). skip 결정 기준은 `_issue-flow.md` Step 3.3/3.5 참조.
+
+> issue 수신 직후의 **브랜치 분기 + work_history 작성**은 공통으로 [`issue-kickoff`](../../agents/issue-kickoff.md)가 수행. 그 뒤 brainstormer → plan-writer → 전문 에이전트 순으로 핸드오프.
 
 ### 금지 필드 (TRD §11 보안)
 

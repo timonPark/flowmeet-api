@@ -102,17 +102,20 @@ work-manager 및 이후 호출되는 **모든 전문 에이전트**는 아래 �
 
 flow 파일이 판단한 **작업 유형**에 따라 `.claude/agents/<name>.md` 에 정의된 전문 에이전트 중 하나를 Claude Code가 **Read 후 직접 실행**(Agent 툴 호출 금지, 1-depth 유지)한다.
 
-| 유형 | 에이전트 |
-|---|---|
-| FEAT (신규 기능), TEST | [`feat-developer`](../../agents/feat-developer.md) |
-| FIX (버그 수정) | [`fix-developer`](../../agents/fix-developer.md) |
-| REFACTOR, PERF | [`refactor-developer`](../../agents/refactor-developer.md) |
-| DOC, CHORE(하네스), ANALYSIS | [`doc-updater`](../../agents/doc-updater.md) |
-| DEPLOY-REVIEW (PR URL 입력) | [`pr-review-check`](../../agents/pr-review-check.md) |
+| 단계 | 에이전트 | 호출 조건 |
+|---|---|---|
+| 공통 선행 | [`issue-kickoff`](../../agents/issue-kickoff.md) | 모든 Issue 경로 |
+| 접근 방식 탐색 | [`brainstormer`](../../agents/brainstormer.md) | 복잡 FEAT·REFACTOR·PERF (복잡도 필터 통과 시) |
+| 플랜 작성 | [`plan-writer`](../../agents/plan-writer.md) | 대부분 작업 (DOC/간단 CHORE 제외) |
+| 신규 기능 / 테스트 | [`feat-developer`](../../agents/feat-developer.md) | FEAT, TEST |
+| 버그 수정 | [`fix-developer`](../../agents/fix-developer.md) | FIX |
+| 리팩토링·성능 | [`refactor-developer`](../../agents/refactor-developer.md) | REFACTOR, PERF |
+| 문서·하네스 | [`doc-updater`](../../agents/doc-updater.md) | DOC, CHORE(하네스), ANALYSIS(문서) |
+| PR 리뷰 체크 | [`pr-review-check`](../../agents/pr-review-check.md) | PR URL 입력 (DEPLOY-REVIEW) |
 
-> issue 수신 직후의 **브랜치 분기 + 이슈 조회**는 공통으로 [`issue-kickoff`](../../agents/issue-kickoff.md)가 수행하고, 그 뒤 위 에이전트 중 하나로 핸드오프.
+> 흐름: `issue-kickoff → brainstormer → plan-writer → 전문 에이전트 → PR` (복잡도 필터 통과 지점에서 brainstormer/plan-writer skip 가능).
 >
-> 매핑 상세 표는 [`_REFERENCE.md`의 type ↔ 전문 에이전트 라우팅](./_REFERENCE.md#type--전문-에이전트-라우팅-agent-필드) 참조.
+> 상세 매핑과 skip 기준은 [`_REFERENCE.md`의 type ↔ 전문 에이전트 라우팅](./_REFERENCE.md#type--전문-에이전트-라우팅-agent-필드) 및 `_issue-flow.md` Step 3.3/3.5 참조.
 
 ## 작업 흐름 요약
 

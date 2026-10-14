@@ -39,6 +39,18 @@ Step 2 — work_history 파일 생성 (frontmatter 완전 작성)
 Step 3 — status:todo 제거 → status:in-progress 추가
   │
   ▼
+Step 3.3 — brainstormer 호출 (복잡 FEAT·REFACTOR·PERF)
+            옵션 2~3개 + trade-off → AskUserQuestion → 선택
+  │
+  ▼
+Step 3.5 — plan-writer 호출
+            Task 쪼개서 docs/plans/{YYYY-MM-DD}-{N}-{slug}.md 저장
+  │
+  ▼
+Step 3.6 — 사용자 최종 승인 (AskUserQuestion) 대기 🚧
+            승인 전까지 전문 에이전트 호출 금지
+  │
+  ▼
 → 전문 에이전트에게 핸드오프 — type 전체 라우팅은 [라우팅 매트릭스](./_REFERENCE.md#type--전문-에이전트-라우팅-agent-필드) 참조. 주요: FEAT·TEST→feat-developer / FIX→fix-developer / REFACTOR·PERF→refactor-developer / DOC·CHORE·ANALYSIS(문서형)→doc-updater / DEPLOY-REVIEW→pr-review-check
   │
   ▼ (작업 완료 시)
@@ -233,6 +245,84 @@ echo "$LABELS" | jq -e '. == ["status:in-progress"]' > /dev/null || {
 ```
 ▶ [Step 3] GitHub 라벨 전환 (todo → in-progress)
 ✅ [Step 3] 라벨 전환 완료 — issue #42
+```
+
+---
+
+## Step 3.3 — brainstormer 호출 `[복잡 작업만]`
+
+**호출 조건**은 [`_REFERENCE.md`의 type ↔ 전문 에이전트 라우팅](./_REFERENCE.md#type--전문-에이전트-라우팅-agent-필드) 표를 **단일 소스**로 사용한다. 요약: 복잡 FEAT·REFACTOR·PERF·넓은 FIX·코드형 ANALYSIS는 필수, 작은 변경·명확한 FIX·DOC·간단 CHORE·문서형 ANALYSIS는 skip. 애매하면 호출.
+
+> opt-out: `--skip-brainstorm` 는 brainstormer만 skip (plan-writer는 수행), `--skip-plan` 은 **둘 다 skip** (사용자 책임).
+
+### 수행 요약
+
+**`.claude/agents/brainstormer.md` Read 후 Claude Code가 직접 실행** (Agent 툴 금지, 1-depth 유지). 상세 로직은 brainstormer.md에만.
+
+1. 요구사항·제약 bullet 정리 (불명확 지점은 사용자에게 질문).
+2. 접근 방식 **2~3개** 생성 — 동일 틀(개요·영향 파일·레이어·trade-off·리스크)로.
+3. `AskUserQuestion` 으로 선택 수집. "Other" 지정 시 D 안으로 수용 후 trade-off 재정리.
+4. 결과를 호출자(`_issue-flow`)에 반환 + work_history "작업 상세"에 1줄.
+
+### Skip 조건에서
+
+사용자에게 "자명한 수정으로 보여 brainstormer skip, plan-writer로 바로 넘어갑니다"라고 **투명성 포맷으로 보고**하고 Step 3.5로.
+
+### 투명성 포맷 예시
+
+```
+▶ [Step 3.3] brainstormer — 접근 방식 탐색
+🚧 [Step 3.3] 옵션 3개 제시 — 선택을 기다립니다
+✅ [Step 3.3] 선택: 옵션 B — "QueryDSL + @BatchSize 조합"
+```
+
+---
+
+## Step 3.5 — plan-writer 호출 `[대부분 작업]`
+
+**호출 조건**은 [`_REFERENCE.md`의 type ↔ 전문 에이전트 라우팅](./_REFERENCE.md#type--전문-에이전트-라우팅-agent-필드) 표를 **단일 소스**로 사용한다 — Step 3.3 brainstormer 조건과 함께 거기서만 관리. 요약: 거의 모든 작업에 필수, DOC/간단 CHORE/작은 TEST/문서형 ANALYSIS는 skip 또는 간소 템플릿.
+
+> `--skip-plan` 가 있으면 brainstormer + plan-writer **둘 다 skip**. `--skip-brainstorm` 는 brainstormer만 skip.
+
+### 수행 요약
+
+**`.claude/agents/plan-writer.md` Read 후 Claude Code가 직접 실행** (Agent 툴 금지). 상세 로직은 plan-writer.md에만.
+
+1. 저장 경로 결정: `docs/plans/{YYYY-MM-DD}-{N}-{slug}.md`.
+2. 영향 파일 매핑(신규/수정) + 레이어 식별.
+3. Task를 **2~5분 단위**로 쪼갠다 (한 Task = 한 액션, 커밋 Task 포함하되 **자동 실행 안 함**).
+4. 검증 레벨(L0/L1/L2) + 롤백 포인트 명시.
+5. 플랜 파일 저장 — frontmatter(`status: PROPOSED` 초기값) + 본문 템플릿.
+
+### 투명성 포맷 예시
+
+```
+▶ [Step 3.5] plan-writer — Task 쪼개서 저장
+✅ [Step 3.5] docs/plans/2026-10-14-42-sample-slug.md 저장 (Task 6개, L1)
+```
+
+---
+
+## Step 3.6 — plan-writer 결과 수신 `[승인은 plan-writer가 수집]`
+
+**사용자 승인 AskUserQuestion은 plan-writer가 §6에서 직접 수집한다.** `_issue-flow`는 결과만 받는다 — 승인 질문을 두 번 띄우지 않는다.
+
+### 받는 값
+
+- plan-writer가 반환한 승인 결과: `APPROVED` / `REVISION_REQUESTED` / `CANCELLED`.
+- 승인된 플랜 파일 경로.
+
+### 분기
+
+- `APPROVED` → 전문 에이전트 호출 단계로 진행. work_history 상태 변화 이력에 "✅ 플랜 승인 — {경로}" 1줄 추가.
+- `REVISION_REQUESTED` → plan-writer가 이미 Edit 반복 후 다시 승인 수집했을 것. 이 상태로 돌아오면 비정상 — 호출자가 사용자에게 중단 사유 보고.
+- `CANCELLED` → work_history에 "🚧 사용자 취소" 기록, 전문 에이전트 호출 중단, 라벨은 `status:in-progress` 유지(재개 가능).
+
+### 투명성 포맷 예시
+
+```
+✅ [Step 3.6] plan-writer 결과 수신 — APPROVED (docs/plans/2026-10-14-42-sample-slug.md)
+→ 전문 에이전트 호출로 진행
 ```
 
 ---
