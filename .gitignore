@@ -59,3 +59,8 @@ work_history/*.local.md
 # codex 2차 리뷰 산출물은 로컬 전용 아카이브 — 원격에 push 금지.
 # 상세: .claude/skills/codex-review-triage/SKILL.md
 codereview/
+
+### Python (scripts/) ###
+__pycache__/
+*.py[cod]
+*$py.class

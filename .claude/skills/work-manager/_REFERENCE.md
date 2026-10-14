@@ -86,12 +86,19 @@ python3 scripts/wh-metrics.py --by type --format json
 python3 scripts/wh-metrics.py --dir other-worktree/work_history --by type
 ```
 
-출력 열(테이블):
-- `bucket` — 그룹 키 (type/assignee/agent/jobType/month)
-- `count` — 전체 레코드 수
-- `completed` — COMPLETED 상태 수
-- `avg_min` — COMPLETED 레코드의 `totalMinutes` 평균
-- `sum_min` — COMPLETED 레코드의 `totalMinutes` 합
+출력 스키마 (테이블 열 ↔ JSON 키):
+
+| 테이블 열 | JSON 키 | 의미 |
+|---|---|---|
+| `bucket` | `bucket` | 그룹 키 (type/assignee/agent/jobType/month) |
+| `count` | `count` | 전체 레코드 수 |
+| `completed` | `completed` | `status == COMPLETED` 수 |
+| `with_min` | `withMinutes` | COMPLETED 중 **유효 `totalMinutes`** 보유 수 (비정수·누락 제외) |
+| `avg_min` | `avgMinutes` | 유효 `totalMinutes` 평균 (소수 1자리) |
+| `sum_min` | `sumMinutes` | 유효 `totalMinutes` 합 |
+
+- `totalMinutes`가 정수가 아니거나 누락이면 stderr 경고 + 평균/합계에서 **제외**(`count`에는 포함).
+- frontmatter 종결자(`---`)가 없거나 평면 key:value 외 형식이면 stderr 경고 + 해당 파일 **skip**.
 
 ### 임시 ad-hoc 집계 (스크립트 없이)
 

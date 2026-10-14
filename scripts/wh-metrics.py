@@ -2,8 +2,10 @@
 """
 work_history 메트릭 집계 CLI.
 
-의존성 없음 (Python 3.9+ 표준 라이브러리만). work_history/*.md 파일들의
-YAML frontmatter를 가볍게 파싱해 그룹별 집계를 출력한다.
+의존성 없음 (Python 3.10+ 표준 라이브러리만 — PEP 604 union 문법 `X | None` 사용).
+work_history/*.md 파일들의 **평면 key:value YAML frontmatter만** 파싱해 그룹별
+집계를 출력한다. nested(dict/list), YAML anchor, 멀티라인 값 등은 지원하지 않는다 —
+현재 _REFERENCE.md 규약 기준으로 충분.
 
 사용:
     python3 scripts/wh-metrics.py                  # 전체 요약
@@ -60,24 +62,39 @@ def parse_frontmatter(path: Path) -> dict[str, str] | None:
 
 def load_records(root: Path) -> list[dict[str, str]]:
     records: list[dict[str, str]] = []
+    skipped: list[Path] = []
     for path in sorted(root.glob("*.md")):
         if path.name.upper() == "README.MD":
             continue
         fm = parse_frontmatter(path)
         if fm is None:
+            skipped.append(path)
             continue
         fm["_path"] = str(path.relative_to(root.parent))
         records.append(fm)
+    if skipped:
+        print(
+            f"[WARN] frontmatter 누락·종결자 없음으로 건너뛴 파일 {len(skipped)}개:",
+            file=sys.stderr,
+        )
+        for p in skipped:
+            print(f"  - {p}", file=sys.stderr)
     return records
 
 
-def to_minutes(value: str | None) -> int:
+def to_minutes(value: str | None, record_path: str | None = None) -> int | None:
+    """정상 정수면 그 값, 비정수·누락이면 None(집계 제외) 반환. 오류 레코드는 stderr로 경고."""
     if not value:
-        return 0
+        return None
     try:
         return int(value)
     except ValueError:
-        return 0
+        ref = f" ({record_path})" if record_path else ""
+        print(
+            f"[WARN] totalMinutes가 정수가 아닙니다: {value!r}{ref} — 평균/합계에서 제외합니다.",
+            file=sys.stderr,
+        )
+        return None
 
 
 def summarize(records: list[dict[str, str]]) -> dict[str, Any]:
@@ -107,15 +124,20 @@ def group_by(records: list[dict[str, str]], key: str) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for bucket, items in sorted(buckets.items()):
         completed_items = [i for i in items if (i.get("status") == "COMPLETED")]
-        minutes = [to_minutes(i.get("totalMinutes")) for i in completed_items]
-        avg_minutes = (sum(minutes) / len(minutes)) if minutes else 0.0
+        # 비정수·누락은 None 반환되어 집계에서 제외.
+        valid_minutes = [
+            m for i in completed_items
+            if (m := to_minutes(i.get("totalMinutes"), i.get("_path"))) is not None
+        ]
+        avg_minutes = (sum(valid_minutes) / len(valid_minutes)) if valid_minutes else 0.0
         out.append(
             {
                 "bucket": bucket,
                 "count": len(items),
                 "completed": len(completed_items),
+                "withMinutes": len(valid_minutes),
                 "avgMinutes": round(avg_minutes, 1),
-                "sumMinutes": sum(minutes),
+                "sumMinutes": sum(valid_minutes),
             }
         )
     return out
@@ -164,6 +186,7 @@ def main() -> int:
         ("bucket", args.by),
         ("count", "count"),
         ("completed", "completed"),
+        ("withMinutes", "with_min"),
         ("avgMinutes", "avg_min"),
         ("sumMinutes", "sum_min"),
     ]
