@@ -58,6 +58,14 @@ verify(exactly = 1) { clock.instant() }
 - `relaxed = true` 는 **금지** — 호출되지 않아야 할 메서드가 조용히 `null`을 반환해 테스트가 거짓양성이 된다. 필요하면 `every { ... }` 로 명시.
 - `verify { ... }` 는 **상호작용이 핵심인 경우만**. 상태 어서션으로 충분하면 verify 생략.
 
+### Spring Security 필터 처리 (현재/미래)
+
+- **현재(Security 설정 없음)**: Controller slice test에서 `@AutoConfigureMockMvc(addFilters = false)` 로 filter chain 비활성화 — 기본 자동 설정의 불특정 동작을 피한다.
+- **Security 설정 도입 후(#8 이후)**:
+  - **공개 엔드포인트**는 `addFilters = true` 유지하고 인증 없는 상태에서 200 응답을 검증.
+  - **보호 엔드포인트**는 `@WithMockUser(roles = "...")` 또는 JWT 테스트 토큰으로 접근, 미인증 상태의 401/403도 함께 검증.
+  - 두 경로를 분리한 테스트를 Controller slice에 둔다 — 인증 계약 회귀를 감지.
+
 ### Spring 테스트에서의 Bean 교체
 
 `@WebMvcTest`에서 Service bean을 교체할 때는 `@TestConfiguration` + `@Bean` + `mockk()` 패턴을 쓴다.

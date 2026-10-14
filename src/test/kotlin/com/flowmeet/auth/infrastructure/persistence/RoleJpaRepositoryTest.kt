@@ -2,10 +2,12 @@ package com.flowmeet.auth.infrastructure.persistence
 
 import com.flowmeet.auth.domain.Role
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.testcontainers.containers.PostgreSQLContainer
@@ -27,11 +29,26 @@ class RoleJpaRepositoryTest {
     fun `name으로 Role을 저장하고 조회한다`() {
         val saved = roles.save(Role(name = "ADMIN"))
 
-        val found = roles.findByName("ADMIN")
+        val found = requireNotNull(roles.findByName("ADMIN")) { "ADMIN role should exist" }
 
-        assertThat(found).isNotNull
-        assertThat(found!!.id).isEqualTo(saved.id)
+        assertThat(found.id).isEqualTo(saved.id)
         assertThat(found.name).isEqualTo("ADMIN")
+    }
+
+    @Test
+    fun `존재하지 않는 name 조회 시 null을 반환한다`() {
+        val found = roles.findByName("NON_EXISTENT")
+
+        assertThat(found).isNull()
+    }
+
+    @Test
+    fun `중복된 name으로 저장하면 unique 제약 위반이 발생한다`() {
+        roles.saveAndFlush(Role(name = "DUP"))
+
+        assertThatThrownBy {
+            roles.saveAndFlush(Role(name = "DUP"))
+        }.isInstanceOf(DataIntegrityViolationException::class.java)
     }
 
     companion object {
