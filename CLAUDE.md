@@ -123,6 +123,7 @@ gradle wrapper --gradle-version 8.12
 - 에러 처리는 `ApiException` + `ErrorCode` + `GlobalExceptionHandler`로만. 상세는 [.claude/skills/error-handling/SKILL.md](./.claude/skills/error-handling/SKILL.md).
 - JPA/PostgreSQL 쿼리는 N+1 방지·`readOnly` 트랜잭션·인덱스 적중·cursor 페이지네이션. 신규 Repository 메서드 추가 시 [.claude/skills/jpa-query-guard/SKILL.md](./.claude/skills/jpa-query-guard/SKILL.md) 체크리스트 적용.
 - 테스트는 JUnit 5 + MockK + Testcontainers. 레이어별 테스트 유형 선택과 Red→Green→Refactor 사이클은 [.claude/skills/tdd-service/SKILL.md](./.claude/skills/tdd-service/SKILL.md).
+- 보안·로깅은 TRD §11 성문화 — JWT·비밀번호·음성 원문·회의 세부 내용은 응답/로그에 노출 금지. 마스킹 유틸(`SensitiveDataMasker`)과 상세는 [.claude/skills/security-logging/SKILL.md](./.claude/skills/security-logging/SKILL.md).
 - Spring Boot 설정은 `application.yml` 사용 (properties 금지).
 - 엔티티는 `@Entity` + `data class` 사용 지양 → 일반 `class`로 작성 (JPA 호환).
 - 테스트는 JUnit 5 + Spring Security Test. `@SpringBootTest`는 최소화하고 slice test 우선.
