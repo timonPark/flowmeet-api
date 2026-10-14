@@ -9,6 +9,7 @@ metadata:
     - AskUserQuestion
     - Bash(gh issue view:*)
     - Bash(git log:*)
+    - Bash(git config:*)
     - Bash(find:*)
     - Bash(grep:*)
     - Bash(date:*)
@@ -138,7 +139,9 @@ status: PROPOSED   # PROPOSED → APPROVED → EXECUTED → DONE
 - 상위 규칙 참조: [spring-layering], [error-handling], [jpa-query-guard], [tdd-service], [security-logging]
 ```
 
-### 6. 사용자 최종 승인 `[AskUserQuestion]`
+### 6. 사용자 최종 승인 `[승인 수집은 plan-writer 단일 책임]`
+
+**`_issue-flow` Step 3.6은 승인 질문을 띄우지 않는다.** 중복 프롬프트 방지를 위해 최종 승인 AskUserQuestion은 **plan-writer에서만** 실행한다.
 
 ```
 AskUserQuestion({
@@ -151,9 +154,9 @@ AskUserQuestion({
 })
 ```
 
-- "승인" 선택: frontmatter `status: APPROVED` 로 갱신 + 완료 보고.
-- "수정 요청": 지시 받아 Edit 반복 → 다시 승인 요청.
-- "취소": `status: PROPOSED` 유지 + 호출자에게 중단 신호 반환.
+- **승인**: frontmatter `status: APPROVED` + `approvedAt: {date}` 로 갱신 → 완료 보고에 `APPROVED` 반환.
+- **수정 요청**: 지시 받아 Edit 반복 → **이 섹션으로 다시 돌아와** 승인 요청. 성공할 때까지 반복.
+- **취소**: `status: PROPOSED` 유지 + 완료 보고에 `CANCELLED` 반환.
 
 ### 7. 완료 보고
 
@@ -168,12 +171,17 @@ AskUserQuestion({
 
 - 호출자가 전문 에이전트를 호출할 때 **플랜 파일 경로를 입력으로 전달**해야 한다 (feat/fix/refactor-developer가 플랜 Task를 따라 수행).
 
-## 플랜 파일 수명 관리
+## 플랜 파일 수명 관리 `[상태 전환 주체 명시]`
 
-- `PROPOSED` → `APPROVED`: 사용자 승인 완료.
-- `APPROVED` → `EXECUTED`: 모든 Task 수행 완료 (전문 에이전트가 작업 종료 시 갱신).
-- `EXECUTED` → `DONE`: PR 머지 완료 (`_pr-flow.md` Step 6에서 갱신).
+| 전환 | 주체 | 시점 | 비고 |
+|---|---|---|---|
+| `PROPOSED` → `APPROVED` | **plan-writer** | §6 승인 완료 시 | 자동 (plan-writer 내부) |
+| `APPROVED` → `EXECUTED` | **전문 에이전트** (feat/fix/refactor-developer) | PR 생성 직후 완료 보고 시 | **현재는 수동 Edit** — 전문 에이전트가 완료 보고 섹션에서 plan 파일을 열어 상태 변경. 자동화는 후속 이슈 범위 |
+| `EXECUTED` → `DONE` | **`_pr-flow.md` Step 6** | PR 머지 완료 시 | **현재는 수동** — `_pr-flow` Step 6-x에서 명시적으로 plan 파일 Edit. 자동화는 후속 이슈 |
+| `CANCELLED` | plan-writer | §6에서 사용자 취소 선택 시 | 작업 중단, 재개 시 다시 PROPOSED로 |
+
 - 수명 종료 후에도 `docs/plans/` 는 **삭제 금지** — 조직 지식 아카이브.
+- 상태 역전(DONE → PROPOSED 등) 금지 — 새 작업은 새 플랜 파일.
 
 ## 금지
 

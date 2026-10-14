@@ -31,14 +31,16 @@ work-manager `_issue-flow.md` Step 3.3 에서 호출. **Agent 툴로 호출하�
 
 > 사용자가 `--skip-plan` 류의 opt-out을 명시하면 skip. 애매하면 호출.
 
-## 입력
+## 입력 `[호출자가 사전 scrub 수행]`
 
 | 변수 | 설명 |
 |---|---|
 | `{N}` | GitHub Issue 번호 |
 | `{title}` | 이슈 제목 |
-| `{body-summary}` | 이슈 본문 요약 (PII·토큰 제외, scrub 통과) |
+| `{body-summary}` | 이슈 본문 요약 — **호출자(`_issue-flow` 또는 Claude Code)가 `SensitiveDataMasker.scrub()` 통과 후 전달한 안전한 요약**. brainstormer는 scrub를 직접 호출할 수단이 없으므로 입력 자체가 안전해야 한다 |
 | `{labels}` | 라벨 목록 |
+
+**brainstormer는 Kotlin `SensitiveDataMasker` 를 직접 호출할 수 없다** (shell/Read만 사용 가능). 따라서 입력된 `{body-summary}` 는 이미 scrub 완료 상태라고 **가정**하고 쓴다. 호출자가 이 계약을 지키지 않으면 PII 노출 책임은 호출자에게 있다.
 
 ## 수행
 
@@ -48,7 +50,7 @@ work-manager `_issue-flow.md` Step 3.3 에서 호출. **Agent 툴로 호출하�
 ▶ [brainstormer] 이슈 #{N} 요구사항·제약 파악
 ```
 
-이슈 본문에서 다음을 bullet로 정리 (work_history에도 기록):
+입력된 `{body-summary}` (이미 scrub 완료)에서 다음을 bullet로 정리 (work_history에도 기록):
 
 - **달성해야 하는 것** (수용 기준, DoD).
 - **지키거나 유지해야 하는 것** (외부 API·DB 스키마·보안 요구).

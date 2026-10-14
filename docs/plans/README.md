@@ -40,4 +40,4 @@ docs/plans/{YYYY-MM-DD}-{N}-{slug}.md
 
 - 플랜 파일은 **삭제하지 않는다**. 수명이 끝나도 (`status: DONE`) 조직 지식 아카이브로 유지.
 - `*.tmp`, `*.local.md`는 임시·개인 메모 전용 — `.gitignore` 반영.
-- 플랜을 참조한 PR이 머지되면 `plan-writer`가 `status: EXECUTED` 또는 `DONE`으로 자동 갱신.
+- 상태 전환 주체·시점은 [plan-writer 수명 관리 표](../../.claude/agents/plan-writer.md) 참조. **현재는 수동 Edit**로 운영 (전문 에이전트 완료 보고 시, `_pr-flow` Step 6 PR 머지 시). PR 머지 이벤트 자동 감지·갱신은 **후속 이슈 범위**.
