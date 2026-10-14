@@ -135,7 +135,9 @@ gradle wrapper --gradle-version 8.12
 
 ### 작업 진입점: work-manager
 
-GitHub Issue URL / `#N` / PR URL 로 작업을 시작할 때는 [.claude/skills/work-manager/SKILL.md](./.claude/skills/work-manager/SKILL.md) 를 진입점으로 사용. 투명성 원칙(`▶` 시작 / `✅` 완료 / `🚧` 병목)을 모든 하위 에이전트가 따른다. Issue flow 상세는 #10, PR flow 상세는 #11 범위.
+GitHub Issue URL / `#N` / PR URL 로 작업을 시작할 때는 [.claude/skills/work-manager/SKILL.md](./.claude/skills/work-manager/SKILL.md) 를 진입점으로 사용. 투명성 원칙(`▶` 시작 / `✅` 완료 / `🚧` 병목)을 모든 하위 에이전트가 따른다.
+
+**복잡 작업(FEAT·REFACTOR·PERF)**은 전문 에이전트 호출 전에 `brainstormer`(접근 2~3개 trade-off) → `plan-writer`(docs/plans/에 Task 쪼개서 저장) → 사용자 승인 게이트를 거친다. DOC·간단한 CHORE는 skip.
 
 
 ```text
