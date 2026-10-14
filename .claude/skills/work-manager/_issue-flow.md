@@ -72,21 +72,21 @@ PR 생성 → status:in-progress 제거 → status:in-review 추가
 
 ## Step 1 — issue-kickoff 호출 `[Agent 툴 금지]`
 
-**`.claude/agents/issue-kickoff.md` Read 후 Claude Code가 직접 실행**한다. Agent 툴 호출은 금지(1-depth 유지). 수행:
+**`.claude/agents/issue-kickoff.md` Read 후 Claude Code가 직접 실행**한다. Agent 툴 호출은 금지(1-depth 유지). 상세 로직(dirty worktree 보호 / 결정적 slug / baseBranch 반영 분기)은 **issue-kickoff.md에만** 두고, 이 flow 문서는 요약만 유지한다.
 
-1. `gh issue view {N} --repo timonPark/flowmeet-api --json number,title,body,labels,state`로 이슈 조회.
-   - 404면 번호 재확인 요청.
-   - `state == CLOSED`면 "이미 종료된 이슈입니다. 작업을 계속할까요?" 확인.
-2. 제목에서 **slug** 추출: 소문자·하이픈·30자 이내. 특수문자·한글은 전치 또는 제거.
-   - 예: `[P2-2] GitHub Issue flow (상태 라벨 전환, 브랜치 생성 통합)` → `p2-2-github-issue-flow`
-3. 브랜치명 조립: `{branchType}/{N}-{slug}`.
-4. `git fetch origin && git checkout main && git pull` 로 베이스 최신화.
-5. 브랜치 생성·전환:
+수행 요약:
+
+1. `gh issue view {N}`으로 이슈 조회 (404·CLOSED 상태 검증).
+2. 결정적 slug 추출 (대괄호 접두어 제거 · 한글 요약 교체 · 소문자 하이픈 30자).
+   - 예: `[P2-2] GitHub Issue flow (상태 라벨 전환, 브랜치 생성 통합)` → **`github-issue-flow`**.
+3. dirty worktree 체크. 변경사항이 있으면 중단·사용자 확인.
+4. `git fetch origin "{baseBranch}"` 후 `origin/{baseBranch}` 에서 바로 분기 (로컬 base 브랜치는 전환하지 않는다).
    ```bash
-   git checkout -b {branchType}/{N}-{slug} origin/{baseBranch}
+   git checkout -b "{branchType}/{N}-{slug}" "origin/{baseBranch}"
    ```
-   - 이미 존재하면 `git checkout {branchType}/{N}-{slug}` 로 전환.
-6. 결과 보고: 투명성 포맷 + 브랜치명·HEAD SHA.
+5. 결과 보고: 투명성 포맷 + 브랜치명·HEAD SHA·base.
+
+> 로컬 `main`·`develop` 등을 임의로 pull하지 않는다 — 사용자가 선택한 base가 정확히 반영되도록 origin ref에서 바로 분기.
 
 ### 투명성 포맷 예시
 
@@ -178,22 +178,51 @@ prUrl: ""
 
 ---
 
-## Step 3 — 상태 라벨 전환 `[gh label 사용]`
+## Step 3 — 상태 라벨 전환 `[gh label 사용 + 결과 검증]`
 
-work_history 작성 후 즉시 수행.
+work_history 작성 후 즉시 수행. **전환 전·후 모두 검증**한다.
+
+### 3-1. 전제 — 라벨 세트 존재 확인
 
 ```bash
-# 1. 이전 status 라벨 제거 (존재할 때만)
+REQUIRED=("status:todo" "status:in-progress" "status:in-review" "status:done")
+EXISTING=$(gh label list --repo timonPark/flowmeet-api --search "status:" --json name --jq '.[].name')
+for L in "${REQUIRED[@]}"; do
+  echo "$EXISTING" | grep -qx "$L" || {
+    echo "라벨 '${L}' 가 리포에 없습니다. #10 PR이 머지됐는지, 또는 'gh label create' 로 생성이 필요한지 확인해 주세요." >&2
+    exit 1
+  }
+done
+```
+
+### 3-2. 전환 실행
+
+```bash
+# 이전 status 라벨 제거 (존재할 때만, 실패는 무시)
 for L in status:todo status:in-review status:done; do
   gh issue edit {N} --repo timonPark/flowmeet-api --remove-label "$L" 2>/dev/null || true
 done
 
-# 2. in-progress 라벨 추가
+# in-progress 라벨 추가
 gh issue edit {N} --repo timonPark/flowmeet-api --add-label "status:in-progress"
 ```
 
-- 라벨이 없으면 (`gh issue edit`가 silently fail), 사용자에게 "status 라벨 세트가 리포에 없습니다. #10 PR이 머지됐는지 확인해 주세요."라고 보고.
-- 라벨 전환 성공 후 work_history의 "상태 변화 이력"에 1줄 추가:
+### 3-3. 결과 검증 `[필수]`
+
+`gh issue edit`는 silent fail 가능. 전환 후 반드시 재조회:
+
+```bash
+LABELS=$(gh issue view {N} --repo timonPark/flowmeet-api --json labels --jq '[.labels[].name] | map(select(startswith("status:")))')
+# 정확히 ["status:in-progress"] 가 아니면 실패
+echo "$LABELS" | jq -e '. == ["status:in-progress"]' > /dev/null || {
+  echo "라벨 전환 검증 실패: 현재 status 라벨=$LABELS" >&2
+  exit 1
+}
+```
+
+- 상태 라벨이 **없거나**, **in-progress 외 라벨이 섞여 있거나**, **두 개가 공존**하면 실패로 간주.
+- 실패 시 사용자에게 보고하고 수동 수정 요청.
+- 성공하면 work_history의 "상태 변화 이력"에 1줄 추가:
   ```
   | {YYYY-MM-DD HH:mm} | 🏷️ 라벨 전환 | status:todo → status:in-progress |
   ```
@@ -213,10 +242,14 @@ gh issue edit {N} --repo timonPark/flowmeet-api --add-label "status:in-progress"
 
 1. **커밋·푸시**: Conventional Commits 형식 ([_REFERENCE.md](./_REFERENCE.md#커밋-메시지-관례)).
 2. **PR 생성**: `gh pr create ... --body "Closes #{N} ..."` — Closes 키워드로 머지 시 자동 close.
-3. **status 전환**: `in-progress` → `in-review`.
+3. **status 전환**: `in-progress` → `in-review`. **Step 3-3 과 동일한 검증 패턴**(최종 라벨이 정확히 `["status:in-review"]` 인지 재조회) 적용.
    ```bash
    gh issue edit {N} --repo timonPark/flowmeet-api --remove-label "status:in-progress"
    gh issue edit {N} --repo timonPark/flowmeet-api --add-label "status:in-review"
+   # 검증
+   gh issue view {N} --repo timonPark/flowmeet-api --json labels \
+     --jq '[.labels[].name] | map(select(startswith("status:")))' \
+     | jq -e '. == ["status:in-review"]' > /dev/null
    ```
 4. work_history 상태 변화 이력에 "🏷️ 라벨 전환 — in-progress → in-review" 추가.
 5. 이후 리뷰·머지 단계는 **`_pr-flow.md`에 위임**. 머지는 사용자 명시 승인 필수.

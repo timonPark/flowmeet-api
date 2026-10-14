@@ -37,43 +37,57 @@ gh issue view {N} --repo timonPark/flowmeet-api \
 - `state == CLOSED` → "#{N}은 이미 종료된 이슈입니다. 작업을 계속할까요?"로 확인.
 - 결과에서 `title`, `labels[].name`, `state`, `url` 보존.
 
-### 2. slug 추출
+### 2. slug 추출 `[결정적 알고리즘]`
 
-제목에서 **소문자·하이픈·30자 이내** slug 조립.
+제목에서 **소문자·하이픈·30자 이내** slug 조립. 아래 순서대로 적용 — 여러 호출 간 동일 결과가 나와야 한다.
 
-- 대괄호 접두어(`[P2-2]` 등) 제거.
-- 특수문자(`().,!?/\`)·공백 → 하이픈.
-- 연속 하이픈은 1개로 축약.
-- 양 끝 하이픈 제거.
-- **ASCII 외 문자(한글 등)**: 가능하면 영문 요약으로 교체 (예: `에러처리` → `error-handling`). 번역이 과하면 영문 핵심 키워드만 남긴다.
-- 30자 초과 시 뒤쪽 토큰부터 잘라낸다.
+1. **대괄호 접두어 제거**: 제목 앞의 `[...]` 블록 모두 제거 (`[P2-2]`, `[P1-1]`, `[fix]` 등). 안에 있는 내용은 slug에 들어가지 않는다.
+2. **ASCII 외 문자 처리**: 한글 등은 **영문 요약으로 교체**. 교체가 애매하면 그 토큰을 **제거**(음차 금지). 결과가 비면 사용자에게 slug 입력을 요청.
+3. 괄호·특수문자(`().,!?/\&`)·공백 → **하이픈**.
+4. 소문자화.
+5. 연속 하이픈은 1개로 축약.
+6. 양 끝 하이픈 제거.
+7. 30자 초과 시 **뒤쪽 토큰부터** 하이픈 경계로 잘라낸다 (중간이 아니라 토큰 단위).
 
-예시:
-- `[P2-2] GitHub Issue flow (상태 라벨 전환, 브랜치 생성 통합)` → `github-issue-flow`
-- `[fix] 로그인 시 500 에러 발생` → `fix-login-500-error` 또는 `login-500-error`
+예시 (두 문서가 동일 결과를 내야 함):
+- `[P2-2] GitHub Issue flow (상태 라벨 전환, 브랜치 생성 통합)`
+  → 접두어 제거: `GitHub Issue flow (상태 라벨 전환, 브랜치 생성 통합)`
+  → 한글 토큰 제거 + 괄호·공백 → 하이픈 + 소문자 + 축약: `github-issue-flow`
+- `[fix] 로그인 500 에러`
+  → 접두어 제거: `로그인 500 에러`
+  → 한글 요약 교체: `login error`
+  → 하이픈화·축약: `login-500-error`
 
-→ 결과를 `{slug}`에 저장.
+→ 결과를 `{slug}`에 저장. 결과가 비면 사용자에게 수동 slug를 요청.
 
 ### 3. 브랜치 조립 + 분기
 
 ```bash
 BRANCH="{branchType}/{N}-{slug}"
 
-git fetch origin
-git checkout main
-git pull
+# 3-1. dirty worktree 보호 — 변경사항이 있으면 중단하고 사용자에게 확인
+if [ -n "$(git status --porcelain)" ]; then
+  echo "작업 중 변경사항이 있습니다. stash/commit 후 재시도하거나 사용자 확인이 필요합니다." >&2
+  git status --short >&2
+  exit 1
+fi
 
-# 이미 존재하면 해당 브랜치로 전환
+# 3-2. 원격 최신화 (로컬 base 브랜치는 체크아웃하지 않음 — origin/{baseBranch}에서 바로 분기)
+git fetch origin "{baseBranch}"
+
+# 3-3. 분기 또는 전환
 if git show-ref --verify --quiet "refs/heads/${BRANCH}"; then
   git checkout "${BRANCH}"
 else
   git checkout -b "${BRANCH}" "origin/{baseBranch}"
 fi
 
-# 결과 확인
+# 3-4. 결과 확인
 HEAD_SHA=$(git rev-parse --short HEAD)
-echo "Branch: ${BRANCH}, HEAD: ${HEAD_SHA}, Base: {baseBranch}"
+echo "Branch: ${BRANCH}, HEAD: ${HEAD_SHA}, Base: {baseBranch} (origin/{baseBranch})"
 ```
+
+> 로컬 `main`·`develop` 등을 전환·pull 하지 않는다 — `origin/{baseBranch}`를 fetch 후 바로 거기서 새 브랜치를 만든다. 사용자가 선택한 base가 정확히 반영된다.
 
 ### 4. 결과 보고 (투명성 포맷)
 
