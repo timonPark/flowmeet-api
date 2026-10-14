@@ -207,13 +207,14 @@ done
 gh issue edit {N} --repo timonPark/flowmeet-api --add-label "status:in-progress"
 ```
 
-### 3-3. 결과 검증 `[필수]`
+### 3-3. 결과 검증 `[필수 — 순서 비의존 집합 비교]`
 
-`gh issue edit`는 silent fail 가능. 전환 후 반드시 재조회:
+`gh issue edit`는 silent fail 가능. 전환 후 반드시 재조회. GitHub API가 라벨 배열 순서를 보장하지 않으므로 **jq `sort` 로 정규화 후 비교**한다.
 
 ```bash
-LABELS=$(gh issue view {N} --repo timonPark/flowmeet-api --json labels --jq '[.labels[].name] | map(select(startswith("status:")))')
-# 정확히 ["status:in-progress"] 가 아니면 실패
+LABELS=$(gh issue view {N} --repo timonPark/flowmeet-api --json labels \
+  --jq '[.labels[].name] | map(select(startswith("status:"))) | sort')
+# 정확히 ["status:in-progress"] 가 아니면 실패 (다른 status 라벨 공존도 검출)
 echo "$LABELS" | jq -e '. == ["status:in-progress"]' > /dev/null || {
   echo "라벨 전환 검증 실패: 현재 status 라벨=$LABELS" >&2
   exit 1
@@ -242,13 +243,13 @@ echo "$LABELS" | jq -e '. == ["status:in-progress"]' > /dev/null || {
 
 1. **커밋·푸시**: Conventional Commits 형식 ([_REFERENCE.md](./_REFERENCE.md#커밋-메시지-관례)).
 2. **PR 생성**: `gh pr create ... --body "Closes #{N} ..."` — Closes 키워드로 머지 시 자동 close.
-3. **status 전환**: `in-progress` → `in-review`. **Step 3-3 과 동일한 검증 패턴**(최종 라벨이 정확히 `["status:in-review"]` 인지 재조회) 적용.
+3. **status 전환**: `in-progress` → `in-review`. **Step 3-3 과 동일한 검증 패턴** 적용(배열 순서 비의존 집합 비교).
    ```bash
    gh issue edit {N} --repo timonPark/flowmeet-api --remove-label "status:in-progress"
    gh issue edit {N} --repo timonPark/flowmeet-api --add-label "status:in-review"
-   # 검증
+   # 검증 — sort로 순서 정규화 후 비교
    gh issue view {N} --repo timonPark/flowmeet-api --json labels \
-     --jq '[.labels[].name] | map(select(startswith("status:")))' \
+     --jq '[.labels[].name] | map(select(startswith("status:"))) | sort' \
      | jq -e '. == ["status:in-review"]' > /dev/null
    ```
 4. work_history 상태 변화 이력에 "🏷️ 라벨 전환 — in-progress → in-review" 추가.

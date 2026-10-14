@@ -51,23 +51,42 @@ cdp-server `_pr-flow.md` 대응. PR URL을 받아 **메타 조회 → 유형 판
 
 ---
 
-## Step 2 — 유형 판정 `[결정적]`
+## Step 2 — 유형 판정 `[결정적, 우선순위 명시]`
 
-아래 순서대로 매칭한다 (앞에서 성립하면 뒤 규칙은 skip).
+### 판정 우선순위
 
-| 단서 | 판정 `type` |
+1. **PR title 접두사 우선** (가장 결정적인 신호). `<type>(scope): ...` 패턴에서 `type` 추출.
+2. title에 접두사가 없거나 모호(`WIP:` 등)하면 **변경 범위 기반**.
+3. 둘 다 모호하면 `DEPLOY-REVIEW` 로 분류하고 사용자에게 확인.
+
+### 접두사 매트릭스 (1순위)
+
+| title 접두사 | 판정 `type` |
 |---|---|
-| 커밋 또는 PR title이 `feat` 접두사 | `FEAT` |
-| `fix` / `hotfix` 접두사 | `FIX` |
-| `refactor` / `perf` 접두사 | `REFACTOR` / `PERF` |
-| `docs` 접두사 또는 변경이 `.md`·`.claude/` 만 | `DOC` |
-| `test` 접두사 또는 변경이 `src/test/` 만 | `TEST` |
-| `chore` 접두사 | `CHORE` |
-| 그 외 (PR 리뷰·배포 전 체크 목적) | `DEPLOY-REVIEW` |
+| `feat` | `FEAT` |
+| `fix`, `hotfix` | `FIX` |
+| `refactor` | `REFACTOR` |
+| `perf` | `PERF` |
+| `docs` | `DOC` |
+| `test` | `TEST` |
+| `chore` | `CHORE` |
+
+### 변경 범위 기반 (2순위)
+
+| 변경 범위 | 판정 `type` |
+|---|---|
+| `.md` + `.claude/` 만 | `DOC` |
+| `src/test/` 만 | `TEST` |
+| 그 외 (실행 코드 변경 포함) | `DEPLOY-REVIEW` 로 두고 사용자 확인 |
+
+### 충돌 처리
+
+- 접두사와 변경 범위가 상반(`chore(harness): ...` 인데 `src/` 코드 변경 포함) → **title 접두사 우선 + work_history에 충돌 사실 1줄 기록**.
+- `title` 접두사 자체가 없으면 2순위로 이동.
 
 > type ↔ 브랜치 type 매핑은 [`_REFERENCE.md`](./_REFERENCE.md#type--브랜치-type-매핑) 참조.
 
-판정 근거(라벨·접두사·변경 범위)를 한 줄로 work_history에 남긴다.
+판정 근거(접두사 매칭 결과·변경 범위·충돌 여부)를 한 줄로 work_history에 남긴다.
 
 ---
 
@@ -99,9 +118,15 @@ prUrl: "{PR url}"
 ---
 ```
 
-### 보안 가드
+### 보안 가드 `[scrub 적용 지점 명시]`
 
-- `gh pr view` body에 PII·토큰·음성 원문이 섞여 있을 수 있다. **직접 복사 금지**. 핵심만 1~2줄 요약하고 free-form 발췌는 `SensitiveDataMasker.scrub()` 통과 ([security-logging §4](../security-logging/SKILL.md)).
+- `gh pr view` body에 PII·토큰·음성 원문이 섞여 있을 수 있다. **직접 복사 금지**.
+- **work_history 저장 전 반드시 scrub 통과 대상**:
+  - frontmatter: `issueTitle` (PR title) — scrub 결과를 저장.
+  - 본문의 "유형 판정 근거" 섹션에 PR body에서 발췌할 때 — scrub 통과 후만 삽입.
+  - 투명성 포맷(`▶`/`✅`)에 title·body·코멘트 발췌가 포함될 때 — 출력 전 scrub.
+- 식별자(number·sha·refName·state·labels[].name)는 scrub 생략.
+- 함수: [`SensitiveDataMasker.scrub()`](../../../src/main/kotlin/com/flowmeet/common/logging/SensitiveDataMasker.kt), 상세 규칙: [security-logging §4](../security-logging/SKILL.md).
 
 ### 투명성 포맷
 
@@ -135,21 +160,24 @@ gh pr view {N} --repo timonPark/flowmeet-api --json reviews \
 
 ### 4-3. codex 2차 리뷰 산출물 확인
 
+경로 규약은 `codereview/<YYYYMMDD>/<branch-slug>.md`. pr-review-check 에이전트 §4와 동일 로직:
+
 ```bash
-# 로컬 아카이브 (gitignored)
-ls codereview/*/`git branch --show-current | tr '/' '-'`.md 2>/dev/null
+BRANCH="{headRefName}"
+SLUG=$(echo "$BRANCH" | tr '/' '-')
+find codereview -mindepth 2 -type f -name "${SLUG}.md" 2>/dev/null
 ```
 
 - 산출물이 없으면 [`codex-review-triage`](../codex-review-triage/SKILL.md) 흐름 수행을 권고(필수는 아니지만 권장).
+- 여러 날짜 폴더가 있으면 최신 날짜의 파일을 선택.
 
-### 4-4. mergeable·CI 상태
+### 4-4. mergeable·CI 상태 `[Step 1 메타 재사용]`
 
-```bash
-gh pr view {N} --repo timonPark/flowmeet-api --json mergeable,mergeStateStatus,statusCheckRollup
-```
+**Step 1 (pr-review-check)이 이미 수집한 값을 재사용**한다. `gh pr view` 를 다시 호출하지 않는다 — 중복 호출은 호출 간 상태 불일치 위험만 늘린다.
 
 - `mergeStateStatus == CLEAN` 그리고 `mergeable == MERGEABLE` 이어야 머지 가능.
 - `statusCheckRollup`에 FAILURE가 있으면 머지 보류.
+- 수 분 이상 지나서 상태가 바뀔 가능성이 크면 Step 1부터 재실행.
 
 ### 투명성 포맷 예시
 
@@ -217,11 +245,11 @@ for I in $ISSUE_NUMS; do
   # 머지되면 이슈는 GitHub가 자동 close하지만, 라벨은 수동 전환
   gh issue edit "$I" --repo timonPark/flowmeet-api --remove-label "status:in-review"
   gh issue edit "$I" --repo timonPark/flowmeet-api --add-label "status:done"
-  # 검증
+  # 검증 — 집합 비교 (GitHub API 라벨 반환 순서 비의존)
   gh issue view "$I" --repo timonPark/flowmeet-api --json labels \
-    --jq '[.labels[].name] | map(select(startswith("status:")))' \
+    --jq '[.labels[].name] | map(select(startswith("status:"))) | sort' \
     | jq -e '. == ["status:done"]' > /dev/null || {
-    echo "이슈 #${I} 라벨 전환 검증 실패" >&2
+    echo "이슈 #${I} 라벨 전환 검증 실패 (현재 status 라벨이 ['status:done']과 불일치)" >&2
   }
 done
 ```

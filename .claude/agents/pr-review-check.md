@@ -36,15 +36,29 @@ gh pr view {N} --repo timonPark/flowmeet-api --json \
 - `state == MERGED` / `CLOSED` → 사용자에게 어떤 작업을 할지 확인 (회고·리뷰 조회만 허용).
 - `isDraft == true` → "Draft PR입니다. 머지 전 Ready for review 전환 필요합니다." 로 안내.
 
-### 2. 미답변 인라인 코멘트 조회
+### 2. 미답변 인라인 코멘트 조회 `[두 단계 로직]`
+
+최상위 코멘트가 "답글 없음"인지 정확히 판정하려면 **모든 답글의 `in_reply_to_id` 집합**을 먼저 모아, 그 집합에 포함되지 않은 최상위 코멘트만 미답변으로 분류한다.
 
 ```bash
-gh api repos/timonPark/flowmeet-api/pulls/{N}/comments \
-  --jq '[.[] | select(.in_reply_to_id == null) | {id, path, line, user: .user.login, body}]'
+# 1) 모든 코멘트 수집
+ALL=$(gh api repos/timonPark/flowmeet-api/pulls/{N}/comments)
+
+# 2) 답글이 가리키는 "부모 id" 집합을 수집
+REPLIED_PARENTS=$(echo "$ALL" \
+  | jq '[.[] | select(.in_reply_to_id != null) | .in_reply_to_id] | unique')
+
+# 3) 최상위 코멘트 중 "답글 받지 못한" 것만 추출 → 미답변 목록
+echo "$ALL" | jq --argjson replied "$REPLIED_PARENTS" '
+  [.[] | select(.in_reply_to_id == null)
+       | select((.id | IN($replied[])) | not)
+       | {id, path, line, user: .user.login, body}]
+'
 ```
 
-- `in_reply_to_id`가 없는 코멘트가 **최상위**(답글 받지 못한 상태).
+- 최상위 코멘트라도 **다른 코멘트가 답글로 가리키고 있으면 처리된 것**으로 간주.
 - 결과를 Step 4-1 보고에 사용.
+- **민감정보 보호**: `body` 필드를 그대로 보고 메시지에 넣지 말 것. 요약하거나 `SensitiveDataMasker.scrub()` 통과 ([security-logging §4](../skills/security-logging/SKILL.md)).
 
 ### 3. 사람 리뷰 승인 수
 
@@ -56,13 +70,16 @@ echo "approved_count=${APPROVED}"
 
 ### 4. codex 2차 리뷰 산출물 확인
 
+산출물 경로 규약은 `codereview/<YYYYMMDD>/<branch-slug>.md`([codex-review-triage §2](../skills/codex-review-triage/SKILL.md)). 날짜 폴더가 여러 개일 수 있으므로 **glob로 날짜 폴더를 포함해 탐색**한다.
+
 ```bash
 BRANCH="{headRefName}"
 SLUG=$(echo "$BRANCH" | tr '/' '-')
-find codereview -type f -name "${SLUG}.md" 2>/dev/null
+find codereview -mindepth 2 -type f -name "${SLUG}.md" 2>/dev/null
 ```
 
 - 없으면 `codex-review-triage` 수행을 권고하는 메시지 반환.
+- 여러 날짜 폴더에 존재하면 최신 날짜(가장 큰 YYYYMMDD)를 선택.
 
 ### 5. mergeable·CI 상태
 
@@ -70,9 +87,14 @@ Step 1에서 이미 받은 `mergeStateStatus`·`mergeable`·`statusCheckRollup` 
 
 ## 반환 (호출자에게 전달하는 요약)
 
+**민감정보 처리**: 아래 자유 서술 필드는 `SensitiveDataMasker.scrub()` 통과 후 반환한다.
+
+- `title`, `body` (PR 본문), 코멘트 `body`, `author.login` (이메일 치환 시).
+- 식별자(number·sha·refName·state·labels[].name)는 scrub 생략.
+
 ```
 PR #{N}
-  title: {title — PII·토큰 금지. 민감하면 요약으로 교체}
+  title: {scrub(title)}
   state: {OPEN|MERGED|CLOSED}
   head → base: {headRefName} → {baseRefName}
   mergeState: {CLEAN|DIRTY|BLOCKED|UNKNOWN}
@@ -81,11 +103,13 @@ PR #{N}
   labels: [{labels[].name}]
 
 리뷰 점검:
-  미답변 인라인 코멘트: {count} ({파일: 사용자 간단 목록})
+  미답변 인라인 코멘트: {count} ({파일: 사용자 간단 목록 — body는 scrub(body)[:80]로 축약})
   사람 승인: {APPROVED count}
   codex 산출물: {경로 또는 "없음 — triage 권고"}
   CI 상태: {statusCheckRollup 요약 — SUCCESS|FAILURE|PENDING|NONE}
 ```
+
+**Step 1에서 수집한 메타는 전체 보고에서 재사용**한다. 호출자가 Step 4에서 `gh pr view`를 다시 호출하지 않도록 핵심 상태(mergeStateStatus·mergeable·statusCheckRollup 요약)를 반환 포함.
 
 ## 호출자 (work-manager) 책임
 
