@@ -39,7 +39,7 @@ Step 2 — work_history 파일 생성 (frontmatter 완전 작성)
 Step 3 — status:todo 제거 → status:in-progress 추가
   │
   ▼
-→ 전문 에이전트에게 핸드오프 (현재 미등록 — #13 완료 후 자동, 현재는 사용자 수동 작업)
+→ 전문 에이전트에게 핸드오프 — type 전체 라우팅은 [라우팅 매트릭스](./_REFERENCE.md#type--전문-에이전트-라우팅-agent-필드) 참조. 주요: FEAT·TEST→feat-developer / FIX→fix-developer / REFACTOR·PERF→refactor-developer / DOC·CHORE·ANALYSIS(문서형)→doc-updater / DEPLOY-REVIEW→pr-review-check
   │
   ▼ (작업 완료 시)
 PR 생성 → status:in-progress 제거 → status:in-review 추가
@@ -112,7 +112,7 @@ issueKey: "#{N}"
 issueTitle: "{이슈 제목 — 민감 정보 금지}"
 type: "{FEAT|FIX|REFACTOR|PERF|DOC|CHORE|TEST}"
 jobType: backend
-agent: "manual"   # 전문 에이전트 등록(#13) 후 agent 이름으로 교체
+agent: "{type에 매핑된 에이전트 이름 — _REFERENCE.md 참조}"   # 수동 분기 시에는 "manual"
 assignee: "{git config user.name}"
 branch: "{branchType}/{N}-{slug}"
 baseBranch: "{baseBranch}"
@@ -279,7 +279,7 @@ echo "$LABELS" | jq -e '. == ["status:in-progress"]' > /dev/null || {
 ✅ [Step 2] work_history/2026-10-14-issue-42-sample.md (type=CHORE 판정)
 ▶ [Step 3] GitHub 라벨 전환 (todo → in-progress)
 ✅ [Step 3] issue #42 status:in-progress
-🎯 [라우팅] 전문 에이전트 미등록(#13 범위) — 사용자 수동 작업 또는 "진행해주세요"로 자동 분기 예정
+🎯 [라우팅] type=CHORE → doc-updater 호출 예정 (agents/doc-updater.md Read 후 직접 실행, Agent 툴 금지)
 ```
 
 ---
