@@ -121,6 +121,7 @@ gradle wrapper --gradle-version 8.12
 - 스타일·네이밍·패키징 상세는 [.claude/skills/kotlin-style/SKILL.md](./.claude/skills/kotlin-style/SKILL.md) 참고 — ktlint가 자동 강제.
 - Spring Boot 레이어 책임(Controller는 Entity 반환 금지, 트랜잭션 경계는 Application만, 조회는 Projection 반환)은 [.claude/skills/spring-layering/SKILL.md](./.claude/skills/spring-layering/SKILL.md) 참고 — 패키지 구조(BC-first)·네이밍 등 상위 규칙이 상충하면 kotlin-style이 우선.
 - 에러 처리는 `ApiException` + `ErrorCode` + `GlobalExceptionHandler`로만. 상세는 [.claude/skills/error-handling/SKILL.md](./.claude/skills/error-handling/SKILL.md).
+- JPA/PostgreSQL 쿼리는 N+1 방지·`readOnly` 트랜잭션·인덱스 적중·cursor 페이지네이션. 신규 Repository 메서드 추가 시 [.claude/skills/jpa-query-guard/SKILL.md](./.claude/skills/jpa-query-guard/SKILL.md) 체크리스트 적용.
 - Spring Boot 설정은 `application.yml` 사용 (properties 금지).
 - 엔티티는 `@Entity` + `data class` 사용 지양 → 일반 `class`로 작성 (JPA 호환).
 - 테스트는 JUnit 5 + Spring Security Test. `@SpringBootTest`는 최소화하고 slice test 우선.
