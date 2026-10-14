@@ -12,12 +12,18 @@
    ```
    ▶ [입력 수신] GitHub Issue #{N} 접수. flow 상세 포팅은 #10 P2-2 범위 — 수동 안내만 수행.
    ```
-2. `gh issue view {N} --repo timonPark/flowmeet-api` 로 이슈 본문·라벨 조회.
-3. 사용자에게 **다음 수동 절차**를 안내:
-   - 브랜치 생성 (`<type>/{N}-{slug}`)
-   - work_history 파일 생성 (`_REFERENCE.md` frontmatter 규약)
-   - 적절한 전문 에이전트 호출 (현재 미등록 — [#13] 완료 후 자동화)
-4. 사용자가 "진행해주세요"로 승인하면 Claude Code가 수동으로 각 단계를 실행.
+2. 번호가 **정수**인지 확인. 아니면 되묻는다 (추측 금지).
+3. `gh issue view {N} --repo timonPark/flowmeet-api` 로 이슈 본문·라벨 조회. 404면 번호 재확인 요청.
+4. **work_history 플레이스홀더** 생성 — 검증 2번(stub 모드) 만족:
+   ```
+   work_history/{YYYY-MM-DD}-issue-{N}-{slug}.md
+   ```
+   frontmatter 최소 필드: `issueKey`, `issueTitle`, `type`(빈 값), `agent: "manual"`, `assignee`, `branch`(빈 값), `baseBranch: main`, `startedAt`, `status: IN_PROGRESS`. 본문에 `gh` 결과를 복사할 때는 PII·토큰이 섞이지 않도록 식별자만 쓰거나 `SensitiveDataMasker.scrub()` 통과.
+5. 사용자에게 **다음 수동 절차**를 안내:
+   - 브랜치 생성 (`<type>/{N}-{slug}`) — `type` ↔ 브랜치 매핑은 [`_REFERENCE.md`](./_REFERENCE.md#type--브랜치-type-매핑)
+   - work_history 상세 편집 (유형 판정 근거·단계별 소요 기록)
+   - 적절한 전문 에이전트 호출 (현재 미등록 — [#13] 완료 후 자동화. 미등록 상태에서는 `agent: "manual"` 유지)
+6. 사용자가 "진행해주세요"로 승인하면 Claude Code가 수동으로 각 단계를 실행.
 
 ## 예정 (상세 포팅: #10)
 

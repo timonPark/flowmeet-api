@@ -66,6 +66,10 @@ work-manager 및 이후 호출되는 **모든 전문 에이전트**는 아래 �
 
 > 침묵 금지. "뭔가 돌고 있다"보다 "지금 X 단계에서 Y 때문에 멈춤"이 항상 우선.
 
+### 출력 민감정보 금지 `[TRD §11]`
+
+투명성 출력(`▶`/`✅`/`🚧`)과 work_history 본문에 **PII·토큰·음성 원문·회의 세부 내용**이 섞여서는 안 된다. 특히 `gh issue view`·`gh pr view` 결과를 그대로 로그에 넣지 말 것. 식별자(이슈 번호·사용자 id·회의 id) 중심으로 표현하고, free-form 발췌가 불가피하면 [SensitiveDataMasker.scrub()](../../../src/main/kotlin/com/flowmeet/common/logging/SensitiveDataMasker.kt) 통과 후 사용 ([security-logging §4](../security-logging/SKILL.md)).
+
 ## 사전 준비
 
 - `git config user.name` 실행 값을 `{assignee}`로 사용한다.
@@ -73,11 +77,25 @@ work-manager 및 이후 호출되는 **모든 전문 에이전트**는 아래 �
 
 ## 입력 유형 감지 `[최우선 — 이후 파일 로드 결정]`
 
-| 입력 패턴 | 판단 | 다음 액션 |
+### 입력 정규화 (적용 순서)
+
+1. 양 끝 공백 제거.
+2. 끝의 `/`, `#`, `?...`, `#...` 제거 (trailing slash·query·fragment).
+3. 호스트명·경로는 **대소문자 무시**로 비교. 번호는 정수로 파싱(`parseInt`), 실패하면 "판정 불가".
+
+### 패턴 매칭
+
+| 입력 패턴 (정규식) | 판단 | 다음 액션 |
 |---|---|---|
-| `github.com/timonPark/flowmeet-api/pull/{번호}` | GitHub PR URL | `.claude/skills/work-manager/_pr-flow.md` 를 Read → 절차 실행 |
-| `github.com/timonPark/flowmeet-api/issues/{번호}` 또는 `#{번호}` | GitHub Issue URL/번호 | `.claude/skills/work-manager/_issue-flow.md` 를 Read → 절차 실행 |
-| 그 외 | 판정 불가 | 사용자에게 어떤 URL/번호인지 되묻는다 (추측 금지) |
+| `(?i)github\.com/timonPark/flowmeet-api/pull/(\d+)` | GitHub PR URL | `.claude/skills/work-manager/_pr-flow.md` 를 Read → 절차 실행 |
+| `(?i)github\.com/timonPark/flowmeet-api/issues/(\d+)` 또는 `^#(\d+)$` | GitHub Issue URL/번호 | `.claude/skills/work-manager/_issue-flow.md` 를 Read → 절차 실행 |
+| 그 외 (저장소 불일치·숫자 아님·빈 입력) | 판정 불가 | 사용자에게 어떤 URL/번호인지 되묻는다 (추측 금지) |
+
+### 추가 검증 (Issue·PR 공통)
+
+- 번호가 정수가 아니면 즉시 되묻기.
+- `gh issue view` 또는 `gh pr view` 호출 결과 404면 "번호를 다시 확인해 주세요".
+- 호스트가 다른 저장소면 "이 리포(`timonPark/flowmeet-api`)의 번호만 처리합니다"로 거절.
 
 > frontmatter 필드 정의 및 추출 가능한 메트릭은 `.claude/skills/work-manager/_REFERENCE.md` 참조.
 
@@ -115,14 +133,19 @@ flow 파일이 판단한 **작업 유형**에 따라 `.claude/agents/<name>.md` 
 
 ## 검증
 
-라우팅을 마친 뒤 아래 네 가지를 반드시 확인한다. 하나라도 실패하면 고치고 다시 검사한다.
+라우팅을 마친 뒤 아래를 확인한다. 실행 모드별로 요구 수준이 다르다.
 
-1. 선택한 전문 에이전트가 `.claude/agents/` 에 **실제로 존재하는가** — 없으면 사용자에게 되묻는다. (현 시점에는 "에이전트 세트 미등록" 사실을 그대로 보고하고 수동 분기)
-2. `work_history/` 에 이번 작업 행이 추가됐는가 — 폴더가 없으면 만들고 다시 기록.
-3. 이슈/PR 유형 판정 근거(라벨·본문 키워드·제목)를 **한 줄로 남겼는가**.
-4. PR 머지 지점이면 사용자 명시 승인이 로그에 남았는가.
+| # | 조건 | 적용 범위 |
+|---|---|---|
+| 1 | 선택한 전문 에이전트가 `.claude/agents/` 에 존재하거나, 미등록 상태를 `agent: "manual"` 로 명시 기록 | 모든 라우팅 |
+| 2 | `work_history/` 기록이 완료되었거나(상세 flow) 최소 `IN_PROGRESS` 플레이스홀더가 생성되었음(stub 수동 분기) | 상세 flow는 필수 / stub는 플레이스홀더 수준 |
+| 3 | 이슈/PR 유형 판정 근거(라벨·본문 키워드·제목)를 **한 줄로 남겼는가** | 모든 라우팅 |
+| 4 | PR 머지 지점이면 사용자 명시 승인이 로그에 남았는가 | PR 머지 단계 |
+| 5 | 투명성 출력·work_history 본문에 민감정보가 섞이지 않았는가(필요 시 `scrub()` 통과) | 모든 라우팅 |
 
-네 가지 모두 통과하면 라우팅 결과와 근거를 사용자에게 보고한다.
+하나라도 실패하면 고치고 다시 검사한다. 전부 통과하면 라우팅 결과와 근거를 사용자에게 보고한다.
+
+> 상세 flow(#10/#11) 포팅 전 **stub 수동 분기 모드**는 2번을 "플레이스홀더 생성"으로 완화한다 — 완전한 메트릭 집계는 자동화 완료 후.
 
 ## 금지 사항
 

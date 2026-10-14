@@ -12,8 +12,10 @@
    ```
    ▶ [입력 수신] GitHub PR #{N} 접수. flow 상세 포팅은 #11 P2-3 범위 — 리뷰·머지 수동 안내.
    ```
-2. `gh pr view {N} --repo timonPark/flowmeet-api` 로 PR 상태·변경 범위 조회.
-3. 사용자에게 다음 중 하나를 안내:
+2. 번호가 **정수**인지 확인. 아니면 되묻는다 (추측 금지).
+3. `gh pr view {N} --repo timonPark/flowmeet-api` 로 PR 상태·변경 범위 조회. 404면 번호 재확인 요청.
+4. **work_history 플레이스홀더** 생성 (type `DEPLOY-REVIEW`, `agent: "manual"`, `branch: ""`, `baseBranch: ""`). 저장 시 PII·토큰 포함 금지.
+5. 사용자에게 다음 중 하나를 안내:
    - **리뷰 요청**: codex 2차 리뷰 흐름은 [codex-review-triage](../codex-review-triage/SKILL.md) 참조.
    - **머지 요청**: 아래 "머지 승인 규칙" 적용.
 
@@ -29,10 +31,24 @@ CLAUDE.md "PR 리뷰·머지 규칙"을 그대로 따른다. 요약:
 ### 머지 실행 명령 (사용자 명시 승인 후)
 
 ```bash
+# 1. 원격 squash merge + 원격 브랜치 삭제
 gh pr merge {PR번호} --repo timonPark/flowmeet-api --squash --delete-branch
+
+# 2. 로컬 main 최신화 (이후 로컬 브랜치 삭제 시 머지 상태 확인용)
 git checkout main && git pull
-git branch -d <head-branch>
+
+# 3. 로컬 head 브랜치가 **존재할 때만** 삭제. 현재 체크아웃된 브랜치는 삭제 불가.
+HEAD_BRANCH=<head-branch>
+if git show-ref --verify --quiet "refs/heads/${HEAD_BRANCH}"; then
+  git branch -d "${HEAD_BRANCH}" || {
+    echo "로컬 ${HEAD_BRANCH} 삭제 실패 — 머지 상태를 확인하고 수동 처리." >&2
+  }
+fi
 ```
+
+- `--delete-branch`는 **원격만** 삭제. 로컬 삭제는 별도 (`git branch -d`).
+- 삭제 전 반드시 `main`으로 checkout (현재 브랜치는 삭제 못 함).
+- squash merge는 로컬 head 커밋 그래프에 반영되지 않아 `git branch -d`가 warning 후 성공하거나 실패할 수 있음. 실패하면 **수동 조치** (`-D` 로 강제 삭제 금지 — 미머지 커밋 유실 위험).
 
 ## 예정 (상세 포팅: #11)
 
