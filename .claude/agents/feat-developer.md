@@ -28,7 +28,7 @@ work-manager `_issue-flow.md` Step 3 이후 호출. **Agent 툴로 호출하지 
 | 변수 | 설명 |
 |---|---|
 | `{N}` | GitHub Issue 번호 |
-| `{branch}` | 작업 브랜치 (`feature/{N}-{slug}`) |
+| `{branch}` | issue-kickoff가 분기한 작업 브랜치 (`{branchType}/{N}-{slug}` — 보통 `feature/` 또는 `test/`) |
 | `{work_history}` | work_history 파일 경로 |
 
 ## 수행
@@ -93,10 +93,18 @@ work-manager `_issue-flow.md` Step 3 이후 호출. **Agent 툴로 호출하지 
 - PR body에 `Closes #{N}` + DoD 체크리스트.
 - PR 생성 후 `_pr-flow.md` 로 위임 — **머지는 사용자 명시 승인 필수**.
 
-### 7. 완료
+### 7. 완료 보고 `[라벨 전환은 호출자 책임]`
 
 - work_history 상태 변화 이력에 "✅ feat-developer 완료 → PR #{M} 생성" 1줄 추가.
-- Issue 라벨 `status:in-progress` → `status:in-review` 전환 (검증 포함, [_issue-flow §작업 완료 시](../skills/work-manager/_issue-flow.md#작업-완료-시--pr-생성--statusin-review-전환)).
+- **라벨 전환은 수행하지 않는다** — `status:in-progress` → `status:in-review` 전환은 **호출자([`_issue-flow.md` 작업 완료 섹션](../skills/work-manager/_issue-flow.md))** 책임.
+- 완료 보고 반환 형식:
+  ```
+  ✅ feat-developer 완료
+    PR: #{M} ({PR URL})
+    변경 요약: {1~2줄}
+    검증: L{n} passed
+    → 호출자: 라벨 전환 + work_history 최종 갱신 수행 바람
+  ```
 
 ## 금지
 

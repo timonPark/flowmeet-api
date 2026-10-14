@@ -39,7 +39,7 @@ Step 2 — work_history 파일 생성 (frontmatter 완전 작성)
 Step 3 — status:todo 제거 → status:in-progress 추가
   │
   ▼
-→ 전문 에이전트에게 핸드오프 (type에 따라 feat-developer / fix-developer / refactor-developer / doc-updater 중 하나 — [라우팅 매트릭스](./_REFERENCE.md#type--전문-에이전트-라우팅-agent-필드))
+→ 전문 에이전트에게 핸드오프 — type 전체 라우팅은 [라우팅 매트릭스](./_REFERENCE.md#type--전문-에이전트-라우팅-agent-필드) 참조. 주요: FEAT·TEST→feat-developer / FIX→fix-developer / REFACTOR·PERF→refactor-developer / DOC·CHORE·ANALYSIS(문서형)→doc-updater / DEPLOY-REVIEW→pr-review-check
   │
   ▼ (작업 완료 시)
 PR 생성 → status:in-progress 제거 → status:in-review 추가

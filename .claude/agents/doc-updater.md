@@ -6,7 +6,15 @@ metadata:
     - Read
     - Write
     - Edit
-    - Bash(git:*)
+    # Git 명령은 "쓰고/상태 보고/푸시"만. destructive(git reset --hard, git clean, git branch -D, git push --force 등)는 포함하지 않는다.
+    - Bash(git add:*)
+    - Bash(git commit:*)
+    - Bash(git push:*)
+    - Bash(git status:*)
+    - Bash(git diff:*)
+    - Bash(git log:*)
+    - Bash(git checkout:*)
+    - Bash(git branch:*)
     - Bash(gh issue view:*)
     - Bash(gh pr create:*)
     - Bash(./gradlew:*)
@@ -83,10 +91,18 @@ work-manager `_issue-flow.md` Step 3 이후 호출. **Agent 툴로 호출하지 
 - PR body에 `Closes #{N}` + 변경 요약 + DoD.
 - PR 생성 후 `_pr-flow.md` 위임 — **머지는 사용자 명시 승인 필수**.
 
-### 6. 완료
+### 6. 완료 보고 `[라벨 전환은 호출자 책임]`
 
 - work_history에 "✅ doc-updater 완료 → PR #{M} 생성" 추가.
-- Issue 라벨 `status:in-progress` → `status:in-review` 전환 + 검증.
+- **라벨 전환은 수행하지 않는다** — `status:in-progress` → `status:in-review` 전환은 **호출자([`_issue-flow.md` 작업 완료 섹션](../skills/work-manager/_issue-flow.md))** 책임.
+- 완료 보고 반환 형식:
+  ```
+  ✅ doc-updater 완료
+    PR: #{M} ({PR URL})
+    변경 요약: {파일 N개 수정, 하네스/문서만}
+    검증: L0 passed
+    → 호출자: 라벨 전환 + work_history 최종 갱신 수행 바람
+  ```
 
 ## 금지
 

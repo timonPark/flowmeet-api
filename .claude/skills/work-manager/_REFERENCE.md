@@ -51,7 +51,8 @@ work-manager는 Step 2 유형 판정 결과를 받아 아래 에이전트를 호
 | `DOC` · `CHORE`(하네스) | `doc-updater` | [doc-updater.md](../../agents/doc-updater.md) |
 | `TEST` | `feat-developer` | 테스트도 TDD 기반 신규 작성이므로 feat-developer 재사용 |
 | `DEPLOY-REVIEW` | `pr-review-check` | [pr-review-check.md](../../agents/pr-review-check.md) — PR 메타·리뷰 체크 전용 |
-| `ANALYSIS` | `doc-updater` | 조사 결과를 문서로 산출하는 경우 |
+| `ANALYSIS` (문서/하네스 산출물) | `doc-updater` | 조사 결과를 문서로 정리하는 경우 |
+| `ANALYSIS` (코드 변경 포함) | `feat-developer` 또는 `refactor-developer` | 샘플 코드·측정 유틸 등을 추가하면 doc-updater 범위 밖 |
 
 > issue 수신 직후의 **브랜치 분기 + work_history 작성**은 공통으로 [`issue-kickoff`](../../agents/issue-kickoff.md)가 수행. 그 뒤에 위 에이전트 중 하나로 핸드오프.
 

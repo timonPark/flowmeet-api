@@ -28,7 +28,7 @@ work-manager `_issue-flow.md` Step 3 이후 호출. **Agent 툴로 호출하지 
 | 변수 | 설명 |
 |---|---|
 | `{N}` | GitHub Issue 번호 |
-| `{branch}` | 작업 브랜치 (`refactor/{N}-{slug}`) |
+| `{branch}` | issue-kickoff가 분기한 작업 브랜치 (`{branchType}/{N}-{slug}` — 보통 `refactor/`) |
 | `{work_history}` | work_history 파일 경로 |
 
 ## 핵심 원칙 — "밖은 같고 안만 바뀐다"
@@ -86,10 +86,19 @@ work-manager `_issue-flow.md` Step 3 이후 호출. **Agent 툴로 호출하지 
 - PR body에 `Closes #{N}` + Before/After 요약(가독성·성능 수치 등) + DoD.
 - PR 생성 후 `_pr-flow.md` 위임 — **머지는 사용자 명시 승인 필수**.
 
-### 7. 완료
+### 7. 완료 보고 `[라벨 전환은 호출자 책임]`
 
 - work_history에 "✅ refactor-developer 완료 → PR #{M} 생성" + 성능 수치(선택) 추가.
-- Issue 라벨 `status:in-progress` → `status:in-review` 전환 + 검증.
+- **라벨 전환은 수행하지 않는다** — `status:in-progress` → `status:in-review` 전환은 **호출자([`_issue-flow.md` 작업 완료 섹션](../skills/work-manager/_issue-flow.md))** 책임.
+- 완료 보고 반환 형식:
+  ```
+  ✅ refactor-developer 완료
+    PR: #{M} ({PR URL})
+    외부 계약 유지: 응답 DTO·ErrorCode·테스트 모두 유지
+    성능 수치(선택): before X ms → after Y ms (Buffers n → m)
+    검증: L{n} passed
+    → 호출자: 라벨 전환 + work_history 최종 갱신 수행 바람
+  ```
 
 ## 금지
 
