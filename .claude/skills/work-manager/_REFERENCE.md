@@ -39,6 +39,22 @@ CLAUDE.md "작업 시작 규칙"의 브랜치 명명과 메트릭의 `type`을 1
 | `DEPLOY-REVIEW` | — (브랜치 없음) | PR URL 입력 — 브랜치 불필요 |
 | `ANALYSIS` | `chore` | 조사·분석 결과물. 코드 변경 작으면 chore |
 
+### type ↔ 전문 에이전트 라우팅 (`agent` 필드)
+
+work-manager는 Step 2 유형 판정 결과를 받아 아래 에이전트를 호출한다. 에이전트 정의는 `.claude/agents/*.md`. 호출 금지(1-depth): Claude Code가 Read 후 직접 실행.
+
+| `type` | `agent` | 에이전트 파일 |
+|---|---|---|
+| `FEAT` | `feat-developer` | [feat-developer.md](../../agents/feat-developer.md) |
+| `FIX` | `fix-developer` | [fix-developer.md](../../agents/fix-developer.md) |
+| `REFACTOR` · `PERF` | `refactor-developer` | [refactor-developer.md](../../agents/refactor-developer.md) |
+| `DOC` · `CHORE`(하네스) | `doc-updater` | [doc-updater.md](../../agents/doc-updater.md) |
+| `TEST` | `feat-developer` | 테스트도 TDD 기반 신규 작성이므로 feat-developer 재사용 |
+| `DEPLOY-REVIEW` | `pr-review-check` | [pr-review-check.md](../../agents/pr-review-check.md) — PR 메타·리뷰 체크 전용 |
+| `ANALYSIS` | `doc-updater` | 조사 결과를 문서로 산출하는 경우 |
+
+> issue 수신 직후의 **브랜치 분기 + work_history 작성**은 공통으로 [`issue-kickoff`](../../agents/issue-kickoff.md)가 수행. 그 뒤에 위 에이전트 중 하나로 핸드오프.
+
 ### 금지 필드 (TRD §11 보안)
 
 다음은 **frontmatter·본문 어디에도 쓰지 않는다**:

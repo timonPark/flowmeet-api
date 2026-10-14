@@ -100,17 +100,19 @@ work-manager 및 이후 호출되는 **모든 전문 에이전트**는 아래 �
 
 ## 라우팅 목적지 (전문 에이전트)
 
-flow 파일이 판단한 **작업 유형**에 따라 `.claude/agents/<name>.md` 에 정의된 전문 에이전트 중 하나를 Agent 툴로 호출한다. 에이전트 세트 정의는 [#13 P2-5] 범위.
+flow 파일이 판단한 **작업 유형**에 따라 `.claude/agents/<name>.md` 에 정의된 전문 에이전트 중 하나를 Claude Code가 **Read 후 직접 실행**(Agent 툴 호출 금지, 1-depth 유지)한다.
 
-| 유형 | 에이전트 (예정) |
+| 유형 | 에이전트 |
 |---|---|
-| FEAT (신규 기능) | `feat-engineer` |
-| FIX (버그) | `fix-engineer` |
-| REFACTOR / PERF | `refactor-engineer` |
-| DOC (문서·하네스) | `doc-writer` |
-| DEPLOY-REVIEW (PR 배포 리뷰) | `pr-reviewer` |
+| FEAT (신규 기능), TEST | [`feat-developer`](../../agents/feat-developer.md) |
+| FIX (버그 수정) | [`fix-developer`](../../agents/fix-developer.md) |
+| REFACTOR, PERF | [`refactor-developer`](../../agents/refactor-developer.md) |
+| DOC, CHORE(하네스), ANALYSIS | [`doc-updater`](../../agents/doc-updater.md) |
+| DEPLOY-REVIEW (PR URL 입력) | [`pr-review-check`](../../agents/pr-review-check.md) |
 
-> 에이전트 미등록 상태(현재)에서는 flow 파일이 **"어떤 에이전트가 필요한지만 보고"** 하고 사용자 확인 후 수동 분기. 자동 호출은 #13 완료 후.
+> issue 수신 직후의 **브랜치 분기 + 이슈 조회**는 공통으로 [`issue-kickoff`](../../agents/issue-kickoff.md)가 수행하고, 그 뒤 위 에이전트 중 하나로 핸드오프.
+>
+> 매핑 상세 표는 [`_REFERENCE.md`의 type ↔ 전문 에이전트 라우팅](./_REFERENCE.md#type--전문-에이전트-라우팅-agent-필드) 참조.
 
 ## 작업 흐름 요약
 
