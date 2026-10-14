@@ -64,25 +64,48 @@ CLAUDE.md "작업 시작 규칙"의 브랜치 명명과 메트릭의 `type`을 1
 | 블로킹 비율 | `status == BLOCKED` 비중 |
 | 평균 PR 리뷰 소요 (DEPLOY-REVIEW) | `type == DEPLOY-REVIEW` 필터 + `totalMinutes` |
 
-### 메트릭 수집 명령 (예시)
+### 메트릭 수집 — `scripts/wh-metrics.py`
 
-work_history 파일들의 frontmatter를 YAML로 파싱해 집계. 실제 구현은 [#12 P2-4]에서 다룬다.
-
-**frontmatter 값 포맷**은 `type: FEAT` (따옴표 없음)과 `issueTitle: "..."` (따옴표 있음)이 섞인다. 안전한 추출은 YAML 파서 사용:
+의존성 없는 Python 3.9+ 스크립트. work_history/*.md의 YAML frontmatter를 가볍게 파싱해 집계. 상세: [`scripts/wh-metrics.py`](../../../scripts/wh-metrics.py).
 
 ```bash
-# yq (brew install yq) — type별 완료 건수
-for f in work_history/*.md; do
-  yq -f extract '.type' "$f"
-done | sort | uniq -c
+# 전체 요약 (status 분포 + 완료율)
+python3 scripts/wh-metrics.py
 
-# 또는 awk로 key 다음 공백·값 추출 (따옴표 유무 모두 대응)
+# 그룹별 집계
+python3 scripts/wh-metrics.py --by type         # 유형별 소요
+python3 scripts/wh-metrics.py --by assignee     # 담당자별
+python3 scripts/wh-metrics.py --by agent        # 에이전트별
+python3 scripts/wh-metrics.py --by jobType      # 직군별
+python3 scripts/wh-metrics.py --by month        # 월별 처리량 (startedAt YYYY-MM)
+
+# JSON 출력
+python3 scripts/wh-metrics.py --by type --format json
+
+# 다른 디렉터리 지정 (워크트리 간 비교 등)
+python3 scripts/wh-metrics.py --dir other-worktree/work_history --by type
+```
+
+출력 열(테이블):
+- `bucket` — 그룹 키 (type/assignee/agent/jobType/month)
+- `count` — 전체 레코드 수
+- `completed` — COMPLETED 상태 수
+- `avg_min` — COMPLETED 레코드의 `totalMinutes` 평균
+- `sum_min` — COMPLETED 레코드의 `totalMinutes` 합
+
+### 임시 ad-hoc 집계 (스크립트 없이)
+
+워크트리에 Python이 없는 환경 fallback:
+
+```bash
+# type별 완료 건수 (따옴표 유무 모두 대응)
 grep -rhE "^type:[[:space:]]*" work_history/ \
   | sed -E 's/^type:[[:space:]]*"?([^"]+)"?[[:space:]]*$/\1/' \
   | sort | uniq -c
-```
 
-> 앞선 리뷰(`awk -F'"'`)는 따옴표 없는 값(`type: FEAT`)에서 빈 결과를 낸다 — 위 두 방식으로 교체.
+# yq 설치돼 있으면
+for f in work_history/*.md; do yq -f extract '.type' "$f"; done | sort | uniq -c
+```
 
 ---
 
