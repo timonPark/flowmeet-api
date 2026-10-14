@@ -30,6 +30,16 @@ class SensitiveDataMaskerTest {
             assertThat(SensitiveDataMasker.email("@domain.only")).isEqualTo("***")
             assertThat(SensitiveDataMasker.email("local@")).isEqualTo("***")
         }
+
+        @Test
+        fun `비정상 입력도 원본을 노출하지 않는다`() {
+            // double @ 와 공백이 섞인 입력 — 복잡한 경계는 "원본을 그대로 반환하지 않는다" 를 보장한다.
+            val weirdInputs = listOf("a@@example.com", "with space@example.com", "trailing@dot.")
+            for (raw in weirdInputs) {
+                val masked = SensitiveDataMasker.email(raw)
+                assertThat(masked).doesNotContain(raw)
+            }
+        }
     }
 
     @Nested
@@ -103,6 +113,31 @@ class SensitiveDataMaskerTest {
         fun `null·빈 메시지는 빈 문자열로 반환`() {
             assertThat(SensitiveDataMasker.scrub(null)).isEmpty()
             assertThat(SensitiveDataMasker.scrub("")).isEmpty()
+        }
+
+        @Test
+        fun `password=·pwd= 등 key=value 비밀번호 패턴을 마스킹한다`() {
+            val raw = "login failed password=hunter2 pwd=anotherSecret"
+            val scrubbed = SensitiveDataMasker.scrub(raw)
+            assertThat(scrubbed).contains("password=***", "pwd=***")
+            assertThat(scrubbed).doesNotContain("hunter2", "anotherSecret")
+        }
+
+        @Test
+        fun `api_key·apiKey·X-API-Key 패턴을 마스킹한다`() {
+            val raw = "api_key=live_abc123 X-API-Key: xyz789 apiKey=camel999"
+            val scrubbed = SensitiveDataMasker.scrub(raw)
+            assertThat(scrubbed).contains("api_key=***", "X-API-Key: ***", "apiKey=***")
+            assertThat(scrubbed).doesNotContain("live_abc123", "xyz789", "camel999")
+        }
+
+        @Test
+        fun `Bearer 토큰 뒤 구두점은 토큰 경계로 간주한다`() {
+            val jwt = "eyJhbGciAAAA.payloadBBBB.sigCCCCCCCC"
+            val scrubbed = SensitiveDataMasker.scrub("Authorization: Bearer $jwt; Content-Type: application/json")
+            assertThat(scrubbed).contains("Bearer eyJh…")
+            assertThat(scrubbed).contains("Content-Type: application/json")
+            assertThat(scrubbed).doesNotContain(jwt)
         }
     }
 }

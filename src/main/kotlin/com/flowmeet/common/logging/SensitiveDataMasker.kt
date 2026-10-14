@@ -71,21 +71,38 @@ object SensitiveDataMasker {
     fun password(): String = "***"
 
     /**
-     * 임의 문자열에서 토큰·비밀번호·이메일 패턴을 찾아 치환.
+     * 임의 문자열에서 알려진 민감 패턴을 찾아 마스킹한다.
      *
-     * 로그 메시지를 직접 쓰는 대신 가능한 한 구조화 필드(key=value)를 쓰고,
-     * free-form 메시지를 어쩔 수 없이 로깅할 때만 이 함수를 통과시킨다.
+     * 보장 범위:
+     * - 이메일 ([EMAIL_PATTERN])
+     * - Bearer 토큰 (`Authorization: Bearer …`)
+     * - 독립 JWT (`eyJ…` 3-segment)
+     * - `password=…`, `pwd=…`, `secret=…` 같은 **key=value 비밀번호 패턴**
+     * - `api_key=…`, `apiKey=…`, `X-API-Key: …` 같은 **API 키 패턴**
+     *
+     * 보장되지 않는 범위:
+     * - 커스텀 필드명이나 전사·회의 세부 내용 — **구조화 로깅 + 호출 측 마스킹이 1차 방어선**이고,
+     *   `scrub()`은 free-form 메시지를 어쩔 수 없이 로깅할 때의 최종 방어선 역할만 한다.
      */
     fun scrub(message: String?): String {
         if (message.isNullOrBlank()) return ""
         var out = message
         out = EMAIL_PATTERN.replace(out) { email(it.value) }
-        out = BEARER_PATTERN.replace(out) { "Bearer ${token(it.groupValues[1])}" }
+        out = BEARER_PATTERN.replace(out) { it.groupValues[1] + "Bearer " + token(it.groupValues[2]) }
         out = JWT_PATTERN.replace(out) { token(it.value) }
+        out = PASSWORD_KV_PATTERN.replace(out) { it.groupValues[1] + "=***" }
+        out = APIKEY_KV_PATTERN.replace(out) { it.groupValues[1] + "=***" }
+        out = APIKEY_HEADER_PATTERN.replace(out) { it.groupValues[1] + ": ***" }
         return out
     }
 
     private val EMAIL_PATTERN = Regex("""[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}""")
-    private val BEARER_PATTERN = Regex("""(?i)Bearer\s+([A-Za-z0-9._~+/=-]+)""")
+
+    // Bearer 뒤 토큰 경계: 공백/구두점/문자열 끝 직전까지만 캡처
+    private val BEARER_PATTERN = Regex("""(^|[^A-Za-z0-9])(?i:Bearer)\s+([A-Za-z0-9._~+/=-]+?)(?=[\s,;)}\]"']|$)""")
     private val JWT_PATTERN = Regex("""eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}""")
+
+    private val PASSWORD_KV_PATTERN = Regex("""(?i)\b(password|pwd|passwd|secret)\s*=\s*[^\s,;)}\]"']+""")
+    private val APIKEY_KV_PATTERN = Regex("""(?i)\b(api[_-]?key|apikey|access[_-]?token)\s*=\s*[^\s,;)}\]"']+""")
+    private val APIKEY_HEADER_PATTERN = Regex("""(?i)(X-API-Key|X-Api-Key|X-Access-Token)\s*:\s*[^\s,;)}\]"']+""")
 }

@@ -61,7 +61,9 @@ log.info("User ${user.email} logged in with password=${password}")
 ```
 
 - MDC(Mapped Diagnostic Context)에 `userId`, `requestId`, `meetingId`를 넣고 포맷터는 구조화 로그(JSON)로 출력.
-- Free-form 메시지가 불가피하면 **[SensitiveDataMasker.scrub()](../../../src/main/kotlin/com/flowmeet/common/logging/SensitiveDataMasker.kt)** 통과 후 로그 — 이메일·Bearer·JWT 패턴을 자동 마스킹.
+- Free-form 메시지가 불가피하면 **[SensitiveDataMasker.scrub()](../../../src/main/kotlin/com/flowmeet/common/logging/SensitiveDataMasker.kt)** 통과 후 로그.
+  - **보장 범위**: 이메일 / Bearer 토큰 / JWT / `password=…`·`pwd=…`·`secret=…` / `api_key=…`·`apiKey=…`·`X-API-Key: …` 패턴.
+  - **보장 안 됨**: 커스텀 필드명, 음성 원문·회의 세부 내용. 이들은 **구조화 로깅 + 호출 측 마스킹이 1차 방어선**이고 `scrub()`은 최종 방어선일 뿐이다.
 
 ## 5. 민감정보 마스킹 유틸
 
