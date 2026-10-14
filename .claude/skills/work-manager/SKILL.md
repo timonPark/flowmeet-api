@@ -1,29 +1,28 @@
 ---
 name: work-manager
 description: GitHub Issue URL/번호 또는 GitHub PR URL을 받아 작업을 분석하고 적절한 전문 에이전트로 라우팅하는 오케스트레이터. work_history/ 파일로 유형·소요 시간·담당자별 메트릭을 축적한다. 사용자가 flowmeet-api 작업을 Issue URL, #N, PR URL 로 시작할 때 로드.
-allowed-tools:
-  [
-    'AskUserQuestion',
-    'Agent',
-    'Skill',
-    'Read',
-    'Write',
-    'Edit',
-    'Bash(git config:*)',
-    'Bash(git fetch:*)',
-    'Bash(git checkout:*)',
-    'Bash(git branch:*)',
-    'Bash(git status:*)',
-    'Bash(gh issue view:*)',
-    'Bash(gh issue edit:*)',
-    'Bash(gh pr view:*)',
-    'Bash(gh pr create:*)',
-    'Bash(gh pr merge:*)',
-    'Bash(gh api:*)',
-    'Bash(find:*)',
-    'Bash(ls:*)',
-    'Bash(date:*)',
-  ]
+metadata:
+  allowed-tools:
+    - AskUserQuestion
+    - Agent
+    - Skill
+    - Read
+    - Write
+    - Edit
+    - Bash(git config:*)
+    - Bash(git fetch:*)
+    - Bash(git checkout:*)
+    - Bash(git branch:*)
+    - Bash(git status:*)
+    - Bash(gh issue view:*)
+    - Bash(gh issue edit:*)
+    - Bash(gh pr view:*)
+    - Bash(gh pr create:*)
+    - Bash(gh pr merge:*)
+    - Bash(gh api:*)
+    - Bash(find:*)
+    - Bash(ls:*)
+    - Bash(date:*)
 ---
 
 # work-manager — flowmeet-api
