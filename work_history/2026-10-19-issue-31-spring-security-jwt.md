@@ -12,7 +12,7 @@ completedAt: ""
 totalMinutes: 0
 status: IN_PROGRESS
 issueUrl: "https://github.com/timonPark/flowmeet-api/issues/31"
-prUrl: ""
+prUrl: "https://github.com/timonPark/flowmeet-api/pull/43"
 ---
 
 # #31 — [S1-E1.1] Spring Security·JWT 인프라 뼈대
@@ -58,6 +58,10 @@ prUrl: ""
 | 2026-10-19 16:45 | 🏷️ 라벨 전환 | `status:todo` → `status:in-progress` |
 | 2026-10-19 16:52 | ✅ 플랜 승인 | `docs/plans/2026-10-19-31-spring-security-jwt.md` (Task 11개, L1) |
 | 2026-10-19 17:00 | ✅ L1 검증 통과 | `./gradlew ktlintCheck test build` — 54 tests (security 신규 22) |
+| 2026-10-19 17:01 | 🚀 PR 생성 | https://github.com/timonPark/flowmeet-api/pull/43 (Closes #31) |
+| 2026-10-19 17:01 | 🏷️ 라벨 전환 | `status:in-progress` → `status:in-review` |
+| 2026-10-19 17:12 | 🔍 codex 2차 리뷰 | 5개 지적 — 유효 4 / 부분유효 1 / 반려 0 (codereview/20261019/feature-31-spring-security-jwt.md) |
+| 2026-10-19 17:12 | ✅ codex 반영 + L1 재검증 | 58 tests passed (SecurityContextUtil 익명 가드 / Filter 중복 등록 방지 / role·subject 누락 테스트 / 파싱 1회 / 플랜 doc 정합성) |
 
 ## 작업 상세
 

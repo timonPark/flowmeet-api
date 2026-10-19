@@ -46,7 +46,7 @@ approvedAt: "2026-10-19 16:52"
 - `src/test/kotlin/com/flowmeet/common/security/SecurityConfigTest.kt` — slice test(`@WebMvcTest` or `@SpringBootTest`)로 CORS preflight + permitAll 동작 확인.
 
 ### 수정
-- `src/main/resources/application.yml` — `flowmeet.jwt.access-token-ttl: PT1H` → `PT30M`. CORS allowed-origin 설정 블록 신설(`app.security.cors.allowed-origins`). `JWT_SECRET` env override 코멘트 보강.
+- `src/main/resources/application.yml` — `flowmeet.jwt.access-token-ttl: PT1H` → `PT30M`. CORS allowed-origin 설정 블록 신설(`flowmeet.security.cors.allowed-origins`). `JWT_SECRET` env override 코멘트 보강.
 - (해당 시) `build.gradle.kts` 의존성 변경 없음 확인 — `starter-security` + `jjwt` 이미 존재.
 
 ### 영향 레이어
@@ -85,7 +85,7 @@ approvedAt: "2026-10-19 16:52"
       · 설정: STATELESS session, CSRF disabled, 모든 요청 permitAll, CORS(`http://localhost:3000` + `credentials=true`), Filter를 `UsernamePasswordAuthenticationFilter.class` 앞에 등록
       · 검증: `SecurityConfigTest`로 preflight(OPTIONS) 200 + GET /api/ping(기존) 200 확인
 - [ ] **T8. application.yml 수정**
-      · 수정: `flowmeet.jwt.access-token-ttl: PT30M`, `app.security.cors.allowed-origins: ["http://localhost:3000"]`
+      · 수정: `flowmeet.jwt.access-token-ttl: PT30M`, `flowmeet.security.cors.allowed-origins: ["http://localhost:3000"]`
       · 코멘트: `JWT_SECRET` env override, 운영 전환 시 32bytes↑ 랜덤 교체 안내
       · 검증: `./gradlew bootRun` 로컬 기동 성공 (수동 L2 확인은 선택)
 - [ ] **T9. L1 전체 검증**

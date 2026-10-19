@@ -1,5 +1,7 @@
 package com.flowmeet.common.security
 
+import io.jsonwebtoken.Jwts
+import io.jsonwebtoken.security.Keys
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -16,6 +18,7 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
+import java.util.Date
 
 class JwtAuthenticationFilterTest {
     private val secret = "a".repeat(64)
@@ -130,12 +133,68 @@ class JwtAuthenticationFilterTest {
         verify(exactly = 1) { chain.doFilter(req, res) }
     }
 
+    private fun signWithoutRole(
+        subject: String?,
+        at: Instant = base,
+    ): String {
+        val key = Keys.hmacShaKeyFor(secret.toByteArray(Charsets.UTF_8))
+        val builder =
+            Jwts
+                .builder()
+                .issuedAt(Date.from(at))
+                .expiration(Date.from(at.plus(Duration.ofMinutes(30))))
+                .signWith(key, Jwts.SIG.HS256)
+        if (subject != null) builder.subject(subject)
+        return builder.compact()
+    }
+
     @Test
-    fun `유효 토큰이어도 role claim이 없으면 Authentication 세팅하지 않는다`() {
-        // issueAccessToken은 항상 role을 넣지만, 외부에서 발급된 role 없는 토큰을 흉내낸다
+    fun `동일 키로 서명했지만 role claim이 없는 토큰은 Authentication 세팅하지 않는다`() {
         val filter = JwtAuthenticationFilter(provider())
-        // "유효한 서명이지만 role 누락" 상황은 실제 코드로 재현하기 어려우므로
-        // 공격자 시나리오 (다른 서명 키) 로 reject 되는지만 검증
+        val tokenWithoutRole = signWithoutRole(subject = "user-42")
+
+        val req =
+            MockHttpServletRequest().apply {
+                addHeader("Authorization", "Bearer $tokenWithoutRole")
+            }
+        val res = MockHttpServletResponse()
+        val chain = mockk<FilterChain>(relaxed = true)
+
+        filter.doFilter(req, res, chain)
+
+        assertThat(SecurityContextHolder.getContext().authentication).isNull()
+        verify(exactly = 1) { chain.doFilter(req, res) }
+    }
+
+    @Test
+    fun `동일 키로 서명했지만 subject가 없는 토큰은 Authentication 세팅하지 않는다`() {
+        val filter = JwtAuthenticationFilter(provider())
+        val key = Keys.hmacShaKeyFor(secret.toByteArray(Charsets.UTF_8))
+        val tokenWithoutSubject =
+            Jwts
+                .builder()
+                .claim(JwtTokenProvider.CLAIM_ROLE, "ADMIN")
+                .issuedAt(Date.from(base))
+                .expiration(Date.from(base.plus(Duration.ofMinutes(30))))
+                .signWith(key, Jwts.SIG.HS256)
+                .compact()
+
+        val req =
+            MockHttpServletRequest().apply {
+                addHeader("Authorization", "Bearer $tokenWithoutSubject")
+            }
+        val res = MockHttpServletResponse()
+        val chain = mockk<FilterChain>(relaxed = true)
+
+        filter.doFilter(req, res, chain)
+
+        assertThat(SecurityContextHolder.getContext().authentication).isNull()
+        verify(exactly = 1) { chain.doFilter(req, res) }
+    }
+
+    @Test
+    fun `다른 서명 키로 발급된 토큰은 Authentication 세팅하지 않는다`() {
+        val filter = JwtAuthenticationFilter(provider())
         val attackerToken =
             JwtTokenProvider(
                 JwtProperties(
@@ -160,9 +219,9 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    fun `유효 토큰 처리 중 발생한 예외도 chain은 반드시 호출된다 (inert 보장)`() {
+    fun `parse 중 IllegalArgumentException이 나도 chain은 호출된다 (inert 보장)`() {
         val provider = mockk<JwtTokenProvider>()
-        every { provider.validate(any()) } throws RuntimeException("unexpected")
+        every { provider.parse(any()) } throws IllegalArgumentException("bad key size")
 
         val filter = JwtAuthenticationFilter(provider)
         val req =

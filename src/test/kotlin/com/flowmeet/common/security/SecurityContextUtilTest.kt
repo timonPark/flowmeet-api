@@ -3,6 +3,7 @@ package com.flowmeet.common.security
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
+import org.springframework.security.authentication.AnonymousAuthenticationToken
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
@@ -42,5 +43,30 @@ class SecurityContextUtilTest {
             )
 
         assertThat(SecurityContextUtil.currentRole()).isEqualTo("TEAM_LEADER")
+    }
+
+    @Test
+    fun `AnonymousAuthenticationToken이면 currentUserId와 currentRole은 null`() {
+        SecurityContextHolder.getContext().authentication =
+            AnonymousAuthenticationToken(
+                "anonymous-key",
+                "anonymousUser",
+                listOf(SimpleGrantedAuthority("ROLE_ANONYMOUS")),
+            )
+
+        assertThat(SecurityContextUtil.currentUserId()).isNull()
+        assertThat(SecurityContextUtil.currentRole()).isNull()
+    }
+
+    @Test
+    fun `isAuthenticated=false인 Authentication이면 null을 반환한다`() {
+        val notAuthed =
+            UsernamePasswordAuthenticationToken("user-99", null).apply {
+                isAuthenticated = false
+            }
+        SecurityContextHolder.getContext().authentication = notAuthed
+
+        assertThat(SecurityContextUtil.currentUserId()).isNull()
+        assertThat(SecurityContextUtil.currentRole()).isNull()
     }
 }

@@ -1,6 +1,7 @@
 package com.flowmeet.common.security
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -44,6 +45,14 @@ class SecurityConfig {
 
     @Bean
     fun jwtAuthenticationFilter(tokenProvider: JwtTokenProvider): JwtAuthenticationFilter = JwtAuthenticationFilter(tokenProvider)
+
+    /**
+     * Spring Boot는 jakarta.servlet.Filter Bean을 서블릿 체인에도 자동 등록한다.
+     * Security 체인에서만 관리하도록 자동 등록을 비활성화한다.
+     */
+    @Bean
+    fun jwtAuthenticationFilterRegistration(filter: JwtAuthenticationFilter): FilterRegistrationBean<JwtAuthenticationFilter> =
+        FilterRegistrationBean(filter).apply { isEnabled = false }
 
     @Bean
     fun corsConfigurationSource(cors: CorsProperties): CorsConfigurationSource {

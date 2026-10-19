@@ -1,6 +1,5 @@
 package com.flowmeet.common.security
 
-import com.flowmeet.common.logging.SensitiveDataMasker
 import io.jsonwebtoken.JwtException
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest
@@ -27,39 +26,35 @@ class JwtAuthenticationFilter(
         response: HttpServletResponse,
         filterChain: FilterChain,
     ) {
-        try {
-            val bearer = request.getHeader(HttpHeaders.AUTHORIZATION)
-            val token =
-                bearer
-                    ?.takeIf { it.startsWith(BEARER_PREFIX, ignoreCase = false) }
-                    ?.removePrefix(BEARER_PREFIX)
-                    ?.trim()
-                    ?.takeIf { it.isNotEmpty() }
-
-            if (token != null && tokenProvider.validate(token)) {
+        extractBearerToken(request)?.let { token ->
+            try {
                 val claims = tokenProvider.parse(token)
                 val role = claims[JwtTokenProvider.CLAIM_ROLE] as? String
-                if (!role.isNullOrBlank() && !claims.subject.isNullOrBlank()) {
-                    val auth =
+                val subject = claims.subject
+                if (!role.isNullOrBlank() && !subject.isNullOrBlank()) {
+                    SecurityContextHolder.getContext().authentication =
                         UsernamePasswordAuthenticationToken(
-                            claims.subject,
+                            subject,
                             null,
                             listOf(SimpleGrantedAuthority("ROLE_$role")),
                         )
-                    SecurityContextHolder.getContext().authentication = auth
                 }
+            } catch (ex: JwtException) {
+                log.debug("JWT inert reject reason={}", ex.javaClass.simpleName)
+            } catch (ex: IllegalArgumentException) {
+                log.debug("JWT inert reject reason={}", ex.javaClass.simpleName)
             }
-        } catch (ex: JwtException) {
-            log.debug("JWT inert reject reason={}", ex.javaClass.simpleName)
-        } catch (ex: RuntimeException) {
-            log.debug(
-                "JWT inert reject (unexpected) reason={} msg={}",
-                ex.javaClass.simpleName,
-                SensitiveDataMasker.scrub(ex.message),
-            )
         }
         filterChain.doFilter(request, response)
     }
+
+    private fun extractBearerToken(request: HttpServletRequest): String? =
+        request
+            .getHeader(HttpHeaders.AUTHORIZATION)
+            ?.takeIf { it.startsWith(BEARER_PREFIX, ignoreCase = false) }
+            ?.removePrefix(BEARER_PREFIX)
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
 
     companion object {
         const val BEARER_PREFIX = "Bearer "
