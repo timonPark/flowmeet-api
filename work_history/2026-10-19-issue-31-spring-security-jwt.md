@@ -8,9 +8,9 @@ assignee: "ParkJH0514"
 branch: "feature/31-spring-security-jwt"
 baseBranch: "main"
 startedAt: "2026-10-19 16:43"
-completedAt: ""
-totalMinutes: 0
-status: IN_PROGRESS
+completedAt: "2026-10-19 17:14"
+totalMinutes: 31
+status: COMPLETED
 issueUrl: "https://github.com/timonPark/flowmeet-api/issues/31"
 prUrl: "https://github.com/timonPark/flowmeet-api/pull/43"
 ---
@@ -27,9 +27,9 @@ prUrl: "https://github.com/timonPark/flowmeet-api/pull/43"
 | 브랜치 | `feature/31-spring-security-jwt` |
 | 베이스 | `main` |
 | 시작 | 2026-10-19 16:43 KST |
-| 완료 | — |
-| 소요 | — |
-| 상태 | 🔄 진행 중 |
+| 완료 | 2026-10-19 17:14 KST |
+| 소요 | 31m |
+| 상태 | ✅ COMPLETED |
 
 ## 유형 판정 근거
 
@@ -62,6 +62,8 @@ prUrl: "https://github.com/timonPark/flowmeet-api/pull/43"
 | 2026-10-19 17:01 | 🏷️ 라벨 전환 | `status:in-progress` → `status:in-review` |
 | 2026-10-19 17:12 | 🔍 codex 2차 리뷰 | 5개 지적 — 유효 4 / 부분유효 1 / 반려 0 (codereview/20261019/feature-31-spring-security-jwt.md) |
 | 2026-10-19 17:12 | ✅ codex 반영 + L1 재검증 | 58 tests passed (SecurityContextUtil 익명 가드 / Filter 중복 등록 방지 / role·subject 누락 테스트 / 파싱 1회 / 플랜 doc 정합성) |
+| 2026-10-19 17:14 | 🚢 PR 머지 (squash) | 671e538c — 사용자 명시 승인 |
+| 2026-10-19 17:14 | 🏷️ 라벨 전환 | `status:in-review` → `status:done` (issue CLOSED) |
 
 ## 작업 상세
 
