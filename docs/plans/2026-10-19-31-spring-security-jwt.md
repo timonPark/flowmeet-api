@@ -6,8 +6,11 @@ author: "ParkJH0514"
 createdAt: "2026-10-19 16:50"
 chosenApproach: "옵션 B — 체인 통합 + inert 모드 (Filter를 chain에 등록하되 유효 토큰만 Authentication 세팅, 무효/누락은 통과. 401 분기는 E2.4)"
 verifyLevel: "L1"
-status: APPROVED
+status: DONE
 approvedAt: "2026-10-19 16:52"
+mergedAt: "2026-10-19 17:14"
+mergeCommit: "671e538c"
+prUrl: "https://github.com/timonPark/flowmeet-api/pull/43"
 ---
 
 # Plan — #31 [S1-E1.1] Spring Security·JWT 인프라 뼈대
