@@ -55,8 +55,9 @@ gh pr create --fill
 flowmeet-api/
 ├─ src/main/kotlin/com/flowmeet/   # 애플리케이션 코드 (base package)
 ├─ src/main/resources/application.yml
+├─ src/main/resources/db/migration/V__N__*.sql  # Flyway migration (V1 = schema.sql 복사본)
 ├─ src/test/kotlin/com/flowmeet/
-├─ database/schema.sql             # outputs/schema.sql과 동기화된 DDL
+├─ database/schema.sql             # outputs/schema.sql과 동기화된 DDL (V1__init.sql과도 동일 유지)
 ├─ docker-compose.yml              # Postgres 16 (schema.sql 자동 적용)
 ├─ uploads/                        # 로컬 파일 저장소 (TRD §9)
 ├─ build.gradle.kts
@@ -104,6 +105,19 @@ gradle wrapper --gradle-version 8.12
 - **AI 제공자 교체 가능**하도록 Deepgram·Claude는 인터페이스로 추상화. (TRD §13)
 - **파일 저장소**는 로컬 `uploads/` → 운영 시 S3로 교체 가능하도록 인터페이스 분리. 파일 접근 시 회의 권한 검증 필수.
 - **보안**: 비밀번호 해시 저장, 음성 파일 URL 직접 노출 금지, 로그에 음성 원문·민감 회의 내용 금지. (TRD §11)
+
+## 데이터베이스 스키마 변경 규칙
+
+Flyway로 스키마를 버전 관리한다 (`src/main/resources/db/migration/V__{N}_{name}.sql`). 애플리케이션 기동 시 Flyway가 미적용 migration을 순서대로 적용.
+
+- **V1 (baseline)**: `V1__init.sql` = `database/schema.sql`의 **바이트 수준 복사본**. 두 파일은 항상 동일 내용으로 유지한다.
+  - 로컬 Postgres는 `docker-compose.yml`이 `database/schema.sql`을 entrypoint로 적용 → V1 skip (baseline-on-migrate).
+  - Testcontainers·CI 등 깨끗한 DB에서는 Flyway가 V1을 그대로 적용.
+- **V2 이후**: **신규 `V__{N}_{name}.sql` 파일만 추가**. `database/schema.sql`과 V1__init.sql은 **수정 금지** — baseline은 고정이다.
+  - 예: `V2__add_navflags_to_users.sql`.
+  - 신규 테이블·컬럼은 반드시 V__N 파일로. "SELECT 1" 수준의 변경이라도 Flyway history에 기록되도록.
+- **로컬 DB 재초기화**: 스키마가 꼬였거나 baseline을 다시 적용하려면 `docker compose down -v && docker compose up -d` 로 볼륨 재생성.
+- **설정 포인트**: `spring.flyway.baseline-on-migrate: true` + `baseline-version: 1` → 기존 로컬 DB(schema.sql = V1 내용이 docker init으로 적용된 상태)에 flyway_schema_history가 없을 때 "V1까지 완료된 상태"로 baseline을 기록하고 V2+부터 적용. 깨끗한 DB(Testcontainers 등)는 baseline이 불필요하므로 V1부터 그대로 적용.
 
 ## API 네임스페이스
 
