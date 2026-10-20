@@ -6,8 +6,11 @@ author: "ParkJH0514"
 createdAt: "2026-10-20 13:00"
 chosenApproach: "옵션 A — 공존 + 동기화 규칙 (schema.sql 유지, V1__init.sql 복사본, Flyway baseline-on-migrate: true + baseline-version: 1 — docker init으로 V1이 이미 반영된 로컬 DB를 baseline으로 수용)"
 verifyLevel: "L1"
-status: APPROVED
+status: DONE
 approvedAt: "2026-10-20 13:02"
+mergedAt: "2026-10-20 13:21"
+mergeCommit: "259c060a"
+prUrl: "https://github.com/timonPark/flowmeet-api/pull/45"
 ---
 
 # Plan — #32 [S1-E1.2] Flyway 도입 + V1 baseline

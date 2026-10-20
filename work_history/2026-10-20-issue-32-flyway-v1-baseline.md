@@ -8,11 +8,11 @@ assignee: "ParkJH0514"
 branch: "chore/32-flyway-v1-baseline"
 baseBranch: "main"
 startedAt: "2026-10-20 12:57"
-completedAt: ""
-totalMinutes: 0
-status: IN_PROGRESS
+completedAt: "2026-10-20 13:21"
+totalMinutes: 24
+status: COMPLETED
 issueUrl: "https://github.com/timonPark/flowmeet-api/issues/32"
-prUrl: ""
+prUrl: "https://github.com/timonPark/flowmeet-api/pull/45"
 ---
 
 # #32 — [S1-E1.2] Flyway 도입 + V1 baseline
@@ -27,9 +27,9 @@ prUrl: ""
 | 브랜치 | `chore/32-flyway-v1-baseline` |
 | 베이스 | `main` |
 | 시작 | 2026-10-20 12:57 KST |
-| 완료 | — |
-| 소요 | — |
-| 상태 | 🔄 진행 중 |
+| 완료 | 2026-10-20 13:21 KST |
+| 소요 | 24m |
+| 상태 | ✅ COMPLETED |
 
 ## 유형 판정 근거
 
@@ -63,6 +63,11 @@ prUrl: ""
 | 2026-10-20 13:14 | 🧪 T6 L1 | docker down -v → up → bootRun → Flyway "baselined at V1" + health UP |
 | 2026-10-20 13:14 | 🧪 T7 | 58 tests passed, 0 failures/errors |
 | 2026-10-20 13:15 | 🧪 T8 | ktlintFormat + build → BUILD SUCCESSFUL |
+| 2026-10-20 13:17 | 🚢 커밋 + 푸시 | 78eade8 (사용자 명시 승인) |
+| 2026-10-20 13:17 | 📬 PR 생성 | #45 → _pr-flow 위임, 머지는 사용자 승인 대기 |
+| 2026-10-20 13:17 | 🏷️ 라벨 전환 | `status:in-progress` → `status:in-review` |
+| 2026-10-20 13:21 | 🚢 PR 머지 (squash) | 259c060 — 사용자 명시 승인 |
+| 2026-10-20 13:21 | 🏷️ 라벨 전환 | `status:in-review` → `status:done` (issue CLOSED) |
 
 ## 작업 상세
 
