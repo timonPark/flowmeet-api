@@ -16,12 +16,12 @@ enum class SystemPermission { ADMIN, USER }
 
 @Entity
 @Table(name = "users")
-class User(
+class User private constructor(
     @Id
     val id: UUID = UUID.randomUUID(),
-    @Column(nullable = false)
+    @Column(nullable = false, length = 100)
     val name: String,
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 255)
     val email: String,
     @Column(name = "password_hash", nullable = false)
     val passwordHash: String,

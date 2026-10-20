@@ -12,7 +12,7 @@ completedAt: ""
 totalMinutes: 0
 status: IN_PROGRESS
 issueUrl: "https://github.com/timonPark/flowmeet-api/issues/33"
-prUrl: ""
+prUrl: "https://github.com/timonPark/flowmeet-api/pull/47"
 ---
 
 # #33 — [S1-E2.1] User 엔티티·Repository + BCrypt 비번 저장
@@ -60,6 +60,11 @@ prUrl: ""
 | 2026-10-20 13:52 | 🟢 Green | User.kt + UserJpaRepository.kt 구현 → 7 tests passed |
 | 2026-10-20 13:52 | 🧪 L1 | ktlintFormat + build → BUILD SUCCESSFUL, 65 tests passed |
 | 2026-10-20 13:53 | 🧪 L2 | bootRun → ddl-auto=validate 통과, health UP |
+| 2026-10-20 13:54 | 🚢 커밋 + 푸시 | 4cf3ad6 (사용자 명시 승인) |
+| 2026-10-20 13:54 | 📬 PR 생성 | #47 → _pr-flow 위임, 머지는 사용자 승인 대기 |
+| 2026-10-20 13:54 | 🏷️ 라벨 전환 | `status:in-progress` → `status:in-review` |
+| 2026-10-20 14:00 | 🔍 codex 2차 리뷰 | 3 지적(high 1 / medium 2) + 2 제안 — 유효 5 / 보류 2 (codereview/20261020/feature-33-user-repository-bcrypt.md) |
+| 2026-10-20 14:02 | 🛠️ triage 반영 | private ctor + length 명시 + flush·clear 재조회 + ddl-auto=validate + 플랜 메타 정리. L1 재검증 65 tests passed. |
 
 ## 작업 상세
 

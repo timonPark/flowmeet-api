@@ -14,7 +14,7 @@ approvedAt: "2026-10-20 13:50"
 
 ## 1. 목표
 
-- `users` 테이블에 대응하는 `@Entity class User` 생성 (전체 11 컬럼 매핑, data class 금지).
+- `users` 테이블에 대응하는 `@Entity class User` 생성 (전체 12 컬럼 매핑 (id 포함), data class 금지).
 - `UserJpaRepository : JpaRepository<User, UUID>` 에 `findByEmail(email): User?` 제공.
 - 도메인 레벨 팩토리 `User.create(name, email, rawPassword, encoder, systemPermission, …)`로 **비밀번호가 해시 상태로만 저장**되도록 보장.
 - Repository slice test: `@DataJpaTest` + Testcontainers(PostgreSQL 16) + `withInitScript("schema.sql")` — Role 테스트와 동일 패턴.
@@ -32,7 +32,7 @@ approvedAt: "2026-10-20 13:50"
 
 ### 신규
 
-- `src/main/kotlin/com/flowmeet/auth/domain/User.kt` — `@Entity class User`, 전체 11 컬럼 매핑, `User.create(…)` 팩토리 (companion object).
+- `src/main/kotlin/com/flowmeet/auth/domain/User.kt` — `@Entity class User`, 전체 12 컬럼 매핑 (id 포함), `User.create(…)` 팩토리 (companion object). primary constructor는 `private` — 팩토리 우회 금지.
 - `src/main/kotlin/com/flowmeet/auth/infrastructure/persistence/UserJpaRepository.kt` — `interface UserJpaRepository : JpaRepository<User, UUID>` with `findByEmail(email: String): User?`.
 - `src/test/kotlin/com/flowmeet/auth/infrastructure/persistence/UserJpaRepositoryTest.kt` — slice test (아래 "검증 계획" 참조).
 
@@ -48,7 +48,8 @@ approvedAt: "2026-10-20 13:50"
 ## 4. Task
 
 - [ ] T1. `User` 엔티티 작성 — `src/main/kotlin/com/flowmeet/auth/domain/User.kt`
-      · schema.sql 11 컬럼 1:1 매핑: id (UUID @Id), name (VARCHAR 100), email (VARCHAR 255 unique), passwordHash (TEXT), teamId (nullable UUID), roleId (nullable UUID), managerId (nullable UUID), systemPermission (enum @Enumerated(STRING)), temporaryPassword (bool, default TRUE), active (bool, default TRUE), createdAt (Instant), updatedAt (Instant).
+      · schema.sql 12 컬럼 1:1 매핑: id (UUID @Id), name (VARCHAR(100), `length = 100` 명시), email (VARCHAR(255) unique, `length = 255` 명시), passwordHash (TEXT), teamId (nullable UUID), roleId (nullable UUID), managerId (nullable UUID), systemPermission (enum @Enumerated(STRING)), temporaryPassword (bool, default TRUE), active (bool, default TRUE), createdAt (Instant), updatedAt (Instant).
+      · primary constructor는 `private` — 모든 생성은 `User.create(…)` 팩토리를 거쳐 비밀번호 해싱 불변식을 강제.
       · `enum class SystemPermission { ADMIN, USER }` 를 **같은 파일 또는 User.kt 하단**에 정의 — Postgres `system_permission` enum과 매핑 (`@Enumerated(EnumType.STRING)` + `@Column(columnDefinition = "system_permission")` + `@org.hibernate.annotations.JdbcTypeCode(SqlTypes.NAMED_ENUM)` 또는 그에 상응하는 수단).
       · `companion object` 에 `User.create(name, email, rawPassword, encoder, systemPermission = USER, teamId = null, roleId = null, managerId = null, temporaryPassword = true): User` — `encoder.encode(rawPassword)`로 해시해 저장. **rawPassword는 변수에 담지 않고 즉시 encode 호출**.
       · `@Entity class` (not data class) + 기본 생성자 상호 운용 — Role 패턴 따름 (`val id = UUID.randomUUID()` default).
