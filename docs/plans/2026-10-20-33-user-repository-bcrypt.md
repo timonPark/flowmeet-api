@@ -6,8 +6,11 @@ author: "ParkJH0514"
 createdAt: "2026-10-20 13:48"
 chosenApproach: "A/A/A — Spring Data 인터페이스 직접 (Role 패턴 일관) + 전체 컬럼 매핑(team/role/manager는 nullable UUID로 유지, @ManyToOne 지연) + Spring PasswordEncoder bean 직접 사용 (#31에서 이미 등록됨)"
 verifyLevel: "L1"
-status: APPROVED
+status: DONE
 approvedAt: "2026-10-20 13:50"
+mergedAt: "2026-10-20 14:04"
+mergeCommit: "6a09495d"
+prUrl: "https://github.com/timonPark/flowmeet-api/pull/47"
 ---
 
 # Plan — #33 [S1-E2.1] User 엔티티·Repository + BCrypt 비번 저장
