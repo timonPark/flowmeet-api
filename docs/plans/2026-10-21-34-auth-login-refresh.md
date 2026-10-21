@@ -6,8 +6,11 @@ author: "ParkJH0514"
 createdAt: "2026-10-21 12:40"
 chosenApproach: "B — HMAC-SHA256(pepper) refresh hash + Role 별도 조회 + profileComplete 하드코딩 true (S1 contract 전제)"
 verifyLevel: "L1"
-status: APPROVED
+status: DONE
 approvedAt: "2026-10-21 12:50"
+mergedAt: "2026-10-21 14:43"
+mergeCommit: "01fc7ae4"
+prUrl: "https://github.com/timonPark/flowmeet-api/pull/50"
 ---
 
 # Plan — #34 [S1-E2.2] POST /api/auth/login + Refresh 발급·쿠키
