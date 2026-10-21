@@ -17,7 +17,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties(JwtProperties::class, CorsProperties::class)
+@EnableConfigurationProperties(JwtProperties::class, CorsProperties::class, RefreshTokenProperties::class)
 class SecurityConfig {
     /**
      * S1-E1.1 뼈대: 모든 요청 permitAll. 실제 401 분기는 S1-E2.4에서 EntryPoint + authenticated()로 전환.
