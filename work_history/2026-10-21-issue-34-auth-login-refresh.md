@@ -8,11 +8,11 @@ assignee: "ParkJH0514"
 branch: "feature/34-auth-login-refresh"
 baseBranch: "main"
 startedAt: "2026-10-21 12:34"
-completedAt: ""
-totalMinutes: 0
-status: IN_PROGRESS
+completedAt: "2026-10-21 14:43"
+totalMinutes: 129
+status: COMPLETED
 issueUrl: "https://github.com/timonPark/flowmeet-api/issues/34"
-prUrl: ""
+prUrl: "https://github.com/timonPark/flowmeet-api/pull/50"
 ---
 
 # #34 — [S1-E2.2] POST /api/auth/login + Refresh 발급·쿠키
@@ -27,9 +27,9 @@ prUrl: ""
 | 브랜치 | `feature/34-auth-login-refresh` |
 | 베이스 | `main` |
 | 시작 | 2026-10-21 12:34 KST |
-| 완료 | — |
-| 소요 | — |
-| 상태 | 🔄 진행 중 |
+| 완료 | 2026-10-21 14:43 KST |
+| 소요 | 2h 9m |
+| 상태 | ✅ COMPLETED |
 
 ## 유형 판정 근거
 
@@ -59,6 +59,12 @@ prUrl: ""
 | 2026-10-21 13:56 | ✅ feat-developer 완료 | TDD(Red→Green) 완료, L1 검증 통과 (79 tests passed, ktlintCheck + build 모두 green) |
 | 2026-10-21 14:33 | 🔍 codex 2차 리뷰 | 4 지적(high 2 / medium 1 / low 1) + 4 제안. codereview/20261021/feature-34-auth-login-refresh.md |
 | 2026-10-21 14:40 | 🛠️ triage 반영 | #1 timing-safe login(dummy BCrypt) + #2 cookie-secure 운영 기본 true + #4 toString() 민감정보 가림 + Q3 refreshTokenTtl 통합. L1 재검증 80 tests passed. #3(운영 pepper 누락 감지)는 jwt.secret과 공통 패턴이라 별도 이슈 #49로 분리. |
+| 2026-10-21 14:50 | 🚢 커밋 + 푸시 | 1b250c7 (사용자 명시 승인) |
+| 2026-10-21 14:50 | 🚢 PR 생성 | #50 (Closes #34) |
+| 2026-10-21 14:50 | 🏷️ 라벨 전환 | `status:in-progress` → `status:in-review` |
+| 2026-10-21 14:43 | 🚢 PR #50 머지 (squash) | `01fc7ae` — 사용자 명시 승인 |
+| 2026-10-21 14:44 | 🏷️ 라벨 전환 | `status:in-review` → `status:done` (issue #34 CLOSED) |
+| 2026-10-21 14:44 | ✅ Epic #41 체크박스 업데이트 | #33·#34 체크 완료 |
 
 ## 작업 상세
 
