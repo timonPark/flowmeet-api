@@ -18,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
+import java.util.UUID
 
 @Service
 class AuthService(
@@ -84,6 +85,84 @@ class AuthService(
                     profileComplete = true,
                 ),
         )
+    }
+
+    // ApiException throw 경로에서도 재사용 감지 시의 revokeAllActive() 부수효과는 반드시 커밋되어야 한다.
+    // AUTH-410 전 다른 ApiException throw(UNAUTHORIZED, EXPIRED_TOKEN)는 모두 state 변경 이전 지점이므로
+    // noRollbackFor 로 선언해도 안전하다.
+    @Transactional(noRollbackFor = [ApiException::class])
+    fun rotate(rawRefresh: String): RefreshRotationResult {
+        val hashed = refreshTokenHasher.hash(rawRefresh)
+        val stored =
+            refreshTokens.findByTokenHash(hashed)
+                ?: throw ApiException(ErrorCode.UNAUTHORIZED)
+
+        val now = clock.instant()
+
+        if (stored.revokedAt != null) {
+            // 세션 하이재킹 가능성: 재사용 감지. 해당 user의 모든 활성 refresh를 즉시 전부 revoke.
+            log.warn("auth.refresh reuse detected userId={} — revoking all active sessions", stored.userId)
+            refreshTokens.revokeAllActiveByUserId(stored.userId, now)
+            throw ApiException(ErrorCode.REFRESH_TOKEN_REVOKED)
+        }
+        if (stored.isExpired(now)) {
+            throw ApiException(ErrorCode.EXPIRED_TOKEN)
+        }
+
+        val user =
+            users.findById(stored.userId).orElse(null)
+                ?: throw ApiException(ErrorCode.UNAUTHORIZED)
+        if (!user.active) {
+            throw ApiException(ErrorCode.UNAUTHORIZED)
+        }
+
+        val role = resolveRole(user)
+
+        stored.revoke(now)
+        val newRaw = refreshTokenGenerator.generate()
+        refreshTokens.save(
+            RefreshToken.issue(
+                userId = user.id,
+                tokenHash = refreshTokenHasher.hash(newRaw),
+                issuedAt = now,
+                expiresAt = now.plus(jwtProperties.refreshTokenTtl),
+            ),
+        )
+        val accessToken = jwtTokenProvider.issueAccessToken(user.id.toString(), role.name)
+
+        log.info("auth.refresh success userId={} role={}", user.id, role.name)
+
+        return RefreshRotationResult(
+            accessToken = accessToken,
+            accessTokenExpiresInSeconds = jwtProperties.accessTokenTtl.seconds,
+            refreshTokenRaw = newRaw,
+        )
+    }
+
+    @Transactional
+    fun logout(
+        rawRefresh: String?,
+        bearerUserId: UUID?,
+    ) {
+        val now = clock.instant()
+        when {
+            !rawRefresh.isNullOrBlank() -> {
+                val hashed = refreshTokenHasher.hash(rawRefresh)
+                val stored = refreshTokens.findByTokenHash(hashed)
+                if (stored == null) {
+                    log.info("auth.logout cookie refresh not found — treating as idempotent")
+                    return
+                }
+                stored.revoke(now)
+                refreshTokens.save(stored)
+                log.info("auth.logout cookie userId={}", stored.userId)
+            }
+            bearerUserId != null -> {
+                log.warn("auth.logout cookie absent, revoking all active userId={}", bearerUserId)
+                refreshTokens.revokeAllActiveByUserId(bearerUserId, now)
+            }
+            else -> throw ApiException(ErrorCode.UNAUTHORIZED)
+        }
     }
 
     private fun resolveRole(user: User): UserRole {
