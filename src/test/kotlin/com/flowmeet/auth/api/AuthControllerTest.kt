@@ -1,5 +1,6 @@
 package com.flowmeet.auth.api
 
+import com.flowmeet.auth.api.support.RefreshCookieManager
 import com.flowmeet.auth.application.AuthService
 import com.flowmeet.auth.application.LoginResult
 import com.flowmeet.auth.domain.SystemPermission
@@ -12,7 +13,6 @@ import com.flowmeet.common.security.RefreshTokenProperties
 import io.mockk.every
 import io.mockk.mockk
 import org.hamcrest.Matchers.containsString
-import org.hamcrest.Matchers.not
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -43,7 +43,11 @@ import java.util.UUID
         "flowmeet.jwt.refresh-token-ttl=PT336H",
     ],
 )
-@Import(AuthControllerTest.MockBeansConfig::class, GlobalExceptionHandler::class)
+@Import(
+    AuthControllerTest.MockBeansConfig::class,
+    GlobalExceptionHandler::class,
+    RefreshCookieManager::class,
+)
 class AuthControllerTest {
     @Autowired
     lateinit var mockMvc: MockMvc

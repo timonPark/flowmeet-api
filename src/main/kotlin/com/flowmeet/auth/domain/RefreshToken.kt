@@ -23,6 +23,14 @@ class RefreshToken private constructor(
     @Column(name = "created_at", nullable = false)
     val createdAt: Instant,
 ) {
+    fun revoke(at: Instant) {
+        if (revokedAt == null) revokedAt = at
+    }
+
+    fun isExpired(now: Instant): Boolean = !now.isBefore(expiresAt)
+
+    fun isActive(now: Instant): Boolean = revokedAt == null && !isExpired(now)
+
     companion object {
         fun issue(
             userId: UUID,
