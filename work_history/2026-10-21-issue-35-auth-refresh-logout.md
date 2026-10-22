@@ -8,11 +8,11 @@ assignee: "ParkJH0514"
 branch: "feature/35-auth-refresh-logout"
 baseBranch: "main"
 startedAt: "2026-10-21 14:50"
-completedAt: ""
-totalMinutes: 0
-status: IN_PROGRESS
+completedAt: "2026-10-22 10:30"
+totalMinutes: 150
+status: COMPLETED
 issueUrl: "https://github.com/timonPark/flowmeet-api/issues/35"
-prUrl: ""
+prUrl: "https://github.com/timonPark/flowmeet-api/pull/52"
 ---
 
 # #35 — [S1-E2.3] POST /api/auth/refresh (회전) + POST /api/auth/logout
@@ -27,9 +27,9 @@ prUrl: ""
 | 브랜치 | `feature/35-auth-refresh-logout` |
 | 베이스 | `main` |
 | 시작 | 2026-10-21 14:50 KST |
-| 완료 | — |
-| 소요 | — |
-| 상태 | 🔄 진행 중 |
+| 완료 | 2026-10-22 10:30 KST |
+| 소요 | ~150m |
+| 상태 | ✅ 완료 (PR #52 merged f424c53) |
 
 ## 유형 판정 근거
 
@@ -58,6 +58,10 @@ prUrl: ""
 | 2026-10-22 00:05 | ✅ 플랜 승인 | docs/plans/2026-10-21-35-auth-refresh-logout.md (옵션 A, L2, Task 18) |
 | 2026-10-22 10:06 | ✅ L2 검증 통과 | build + bootRun /actuator/health UP + refresh/logout smoke |
 | 2026-10-22 10:25 | ✅ codex-review-triage | Finding 3·4 반영 (테스트 보강). Finding 1·2(동시성)는 follow-up 이슈로 이월 |
+| 2026-10-22 10:30 | ✅ 커밋·푸시·PR 생성 | PR #52 (commit 1d7e88e, Verified: L2) |
+| 2026-10-22 10:30 | 🏷️ 라벨 전환 | `status:in-progress` → `status:in-review` |
+| 2026-10-22 10:26 | ✅ PR #52 머지 | squash merge f424c53, 브랜치 삭제 |
+| 2026-10-22 10:30 | 🏷️ 라벨 전환 | `status:in-review` → `status:done` |
 
 ## 작업 상세
 
