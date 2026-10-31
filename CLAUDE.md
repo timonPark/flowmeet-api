@@ -91,11 +91,32 @@ gradle wrapper --gradle-version 8.12
 
 | 변수 | 기본값 / 설명 |
 | --- | --- |
-| `JWT_SECRET` | 로컬 기본값 제공. 운영은 반드시 교체 (32 bytes↑) |
+| `SPRING_PROFILES_ACTIVE` | `local` (기본). 운영 배포 시 `prod` 필수 |
+| `JWT_SECRET` | `prod` profile 전용. **미설정 시 기동 실패** (32 bytes↑ 랜덤) |
+| `REFRESH_TOKEN_PEPPER` | `prod` profile 전용. **미설정 시 기동 실패** (32 bytes↑ 랜덤) |
+| `REFRESH_COOKIE_SECURE` | `prod` 기본 `true`, `local` 기본 `false` |
 | `DEEPGRAM_API_KEY` | Deepgram STT 키 |
 | `CLAUDE_API_KEY` | Claude Headless 키 |
 
 로컬 DB 접속 정보는 `application.yml`에 하드코딩 (flowmeet / local-password).
+
+### Profile 정책 (secret 보호)
+
+`application.yml`에는 secret 공개 기본값을 두지 않는다. 두 profile로 분리:
+
+- `application-local.yml` — 로컬 전용 더미 secret 포함. `./gradlew bootRun` 은 기본으로 이 profile 활성 (build.gradle.kts 에서 `SPRING_PROFILES_ACTIVE=local` 지정).
+- `application-prod.yml` — `${JWT_SECRET}` / `${REFRESH_TOKEN_PEPPER}` 를 default 없이 선언. 운영에서 env var 누락 시 Spring placeholder 미해결로 `BeanCreationException` → **기동 실패**.
+
+운영 배포 체크:
+
+```bash
+export SPRING_PROFILES_ACTIVE=prod
+export JWT_SECRET='<32bytes↑ random>'
+export REFRESH_TOKEN_PEPPER='<32bytes↑ random>'
+./gradlew bootJar && java -jar build/libs/*.jar
+```
+
+둘 중 하나라도 빠지면 기동 즉시 실패한다 (의도된 동작).
 
 ## 설계 원칙 (TRD 발췌)
 
