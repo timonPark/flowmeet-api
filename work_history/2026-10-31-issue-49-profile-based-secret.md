@@ -12,7 +12,7 @@ completedAt: ""
 totalMinutes: 0
 status: IN_PROGRESS
 issueUrl: "https://github.com/timonPark/flowmeet-api/issues/49"
-prUrl: ""
+prUrl: "https://github.com/timonPark/flowmeet-api/pull/54"
 ---
 
 # #49 — [chore] profile-based secret management (jwt.secret + refresh.pepper)
@@ -61,6 +61,11 @@ prUrl: ""
 | 2026-10-31 16:28 | ✅ 플랜 승인 | `docs/plans/2026-10-31-49-profile-based-secret.md` (T6 skip) |
 | 2026-10-31 16:28 | 🔁 라우팅 재조정 | doc-updater charter 밖(runtime config 변경) → work-manager 직접 수행 |
 | 2026-10-31 16:30 | ✅ 구현 완료 | T1~T5, L1 (ktlintCheck + test 110 pass) |
+| 2026-10-31 16:31 | 📤 커밋·푸시 | 98e078d, origin/chore/49-profile-based-secret |
+| 2026-10-31 16:31 | 🔀 PR 생성 | #54 (https://github.com/timonPark/flowmeet-api/pull/54) |
+| 2026-10-31 16:31 | 🏷️ 라벨 전환 | `status:in-progress` → `status:in-review` |
+| 2026-10-31 16:57 | 🔍 codex 리뷰 Triage | high×1 / medium×1 / low×1 — 모두 유효 판정, 반영 결정 |
+| 2026-10-31 16:57 | ✅ 리뷰 반영 | F1(profile default 제거) + F1b(Test task env) + F2(local cookie override) + F3(SecretProfileStartupTest 4 cases) + F4(CLAUDE.md), L1 114 pass |
 
 ## 작업 상세
 

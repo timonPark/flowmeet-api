@@ -102,10 +102,16 @@ gradle wrapper --gradle-version 8.12
 
 ### Profile 정책 (secret 보호)
 
-`application.yml`에는 secret 공개 기본값을 두지 않는다. 두 profile로 분리:
+`application.yml` 의 `spring.profiles.active` 는 **default 값을 두지 않는다** (`${SPRING_PROFILES_ACTIVE}`). 따라서:
 
-- `application-local.yml` — 로컬 전용 더미 secret 포함. `./gradlew bootRun` 은 기본으로 이 profile 활성 (build.gradle.kts 에서 `SPRING_PROFILES_ACTIVE=local` 지정).
-- `application-prod.yml` — `${JWT_SECRET}` / `${REFRESH_TOKEN_PEPPER}` 를 default 없이 선언. 운영에서 env var 누락 시 Spring placeholder 미해결로 `BeanCreationException` → **기동 실패**.
+- **배포 JAR 을 `SPRING_PROFILES_ACTIVE` 없이 실행하면** Spring placeholder 미해결로 기동 즉시 실패 (`IllegalArgumentException`). 로컬 더미 secret 이 운영에 섞여 들어가는 사고를 원천 차단.
+- **`./gradlew bootRun` / `./gradlew test`** 는 `build.gradle.kts` 가 `SPRING_PROFILES_ACTIVE=local` 을 주입하므로 그대로 작동. 외부 env 가 있으면 그 값을 우선.
+- **IDE 에서 직접 Run 할 때**는 Run Configuration 환경변수에 `SPRING_PROFILES_ACTIVE=local` 을 수동으로 추가.
+
+두 profile 파일:
+
+- `application-local.yml` — 로컬-전용 더미 secret. `cookie-secure` 는 `${REFRESH_COOKIE_SECURE:false}` 로 override 가능.
+- `application-prod.yml` — `${JWT_SECRET}` / `${REFRESH_TOKEN_PEPPER}` 를 default 없이 선언. 운영에서 env var 누락 시 Spring placeholder 미해결로 **기동 실패**.
 
 운영 배포 체크:
 
@@ -116,7 +122,7 @@ export REFRESH_TOKEN_PEPPER='<32bytes↑ random>'
 ./gradlew bootJar && java -jar build/libs/*.jar
 ```
 
-둘 중 하나라도 빠지면 기동 즉시 실패한다 (의도된 동작).
+위 3 변수 중 하나라도 빠지면 기동 즉시 실패한다 (의도된 동작). 회귀 가드는 `SecretProfileStartupTest` 가 수행.
 
 ## 설계 원칙 (TRD 발췌)
 

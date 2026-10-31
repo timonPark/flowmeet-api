@@ -2,7 +2,9 @@ spring:
   application:
     name: flowmeet-backend
   profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local}
+    # default 를 두지 않는다 — JAR 배포에서 SPRING_PROFILES_ACTIVE 미지정 시 placeholder 미해결로 즉시 기동 실패.
+    # 로컬 개발은 build.gradle.kts 의 bootRun/test task 가 'local' 을 주입한다.
+    active: ${SPRING_PROFILES_ACTIVE}
   datasource:
     url: jdbc:postgresql://localhost:5432/flowmeet
     username: flowmeet

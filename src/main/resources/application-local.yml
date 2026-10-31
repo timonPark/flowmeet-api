@@ -6,4 +6,5 @@ flowmeet:
   security:
     refresh-token:
       pepper: local-only-dev-refresh-pepper-at-least-32-bytes-xx
-      cookie-secure: false
+      # 로컬 HTTPS 검증용 override 허용 — 기본은 false.
+      cookie-secure: ${REFRESH_COOKIE_SECURE:false}
