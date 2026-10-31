@@ -6,8 +6,12 @@ author: "ParkJH0514"
 createdAt: "2026-10-21 16:30"
 chosenApproach: "옵션 A — AuthService에 refresh/logout 2 메서드 추가 + RefreshCookieManager로 쿠키 조립·추출 공통화"
 verifyLevel: "L2"
-status: APPROVED
+status: DONE
 approvedAt: "2026-10-22 00:05"
+executedAt: "2026-10-22 10:30"
+doneAt: "2026-10-22 10:30"
+prUrl: "https://github.com/timonPark/flowmeet-api/pull/52"
+mergeCommit: "f424c53"
 ---
 
 # Plan — #35 [S1-E2.3] POST /api/auth/refresh (회전) + POST /api/auth/logout
