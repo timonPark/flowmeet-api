@@ -1,0 +1,10 @@
+# local profile — 로컬 개발 전용. 이 값들은 공개 가능한 로컬-전용 더미이며 운영에서 사용 금지.
+# 기본 활성 (application.yml 의 spring.profiles.active=${SPRING_PROFILES_ACTIVE:local}).
+flowmeet:
+  jwt:
+    secret: local-only-dev-jwt-secret-at-least-32-bytes-random-xx
+  security:
+    refresh-token:
+      pepper: local-only-dev-refresh-pepper-at-least-32-bytes-xx
+      # 로컬 HTTPS 검증용 override 허용 — 기본은 false.
+      cookie-secure: ${REFRESH_COOKIE_SECURE:false}

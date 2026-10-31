@@ -1,6 +1,10 @@
 spring:
   application:
     name: flowmeet-backend
+  profiles:
+    # default 를 두지 않는다 — JAR 배포에서 SPRING_PROFILES_ACTIVE 미지정 시 placeholder 미해결로 즉시 기동 실패.
+    # 로컬 개발은 build.gradle.kts 의 bootRun/test task 가 'local' 을 주입한다.
+    active: ${SPRING_PROFILES_ACTIVE}
   datasource:
     url: jdbc:postgresql://localhost:5432/flowmeet
     username: flowmeet
@@ -31,8 +35,7 @@ server:
 flowmeet:
   uploads-dir: ./uploads
   jwt:
-    # 운영 전환 시 JWT_SECRET 환경변수로 반드시 교체 (HS256 최소 32bytes, 권장 ≥ 64bytes 랜덤).
-    secret: ${JWT_SECRET:change-me-in-production-this-is-a-local-dev-secret-at-least-32-bytes}
+    # secret 은 profile(application-{local,prod}.yml)에서 주입. 운영은 JWT_SECRET env var 필수(기동 실패로 보호).
     access-token-ttl: PT30M
     refresh-token-ttl: P14D
   security:
@@ -42,11 +45,7 @@ flowmeet:
       allowed-methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
       allowed-headers: [Authorization, Content-Type, X-Request-Id]
       allow-credentials: true
-    refresh-token:
-      # 운영 전환 시 REFRESH_TOKEN_PEPPER 환경변수로 반드시 교체 (HMAC-SHA256 pepper, 최소 32bytes 랜덤).
-      pepper: ${REFRESH_TOKEN_PEPPER:change-me-in-production-this-is-a-local-dev-refresh-pepper-32b}
-      # 운영 기본 true. 로컬 http 환경은 REFRESH_COOKIE_SECURE=false 로 override.
-      cookie-secure: ${REFRESH_COOKIE_SECURE:true}
+    # refresh-token.pepper / cookie-secure 는 profile 에서 주입.
   deepgram:
     api-key: ${DEEPGRAM_API_KEY:}
   claude:

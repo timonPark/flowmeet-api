@@ -1,0 +1,10 @@
+# prod profile — 운영 환경 전용 설정.
+# JWT_SECRET / REFRESH_TOKEN_PEPPER 환경변수가 없으면 Spring placeholder 미해결로 기동 실패.
+# 32bytes 이상 랜덤 값으로 반드시 주입할 것.
+flowmeet:
+  jwt:
+    secret: ${JWT_SECRET}
+  security:
+    refresh-token:
+      pepper: ${REFRESH_TOKEN_PEPPER}
+      cookie-secure: ${REFRESH_COOKIE_SECURE:true}
